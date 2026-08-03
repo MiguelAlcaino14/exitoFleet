@@ -1,4 +1,4 @@
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY package.json .yarnrc.yml ./
@@ -6,7 +6,7 @@ COPY prisma ./prisma
 RUN corepack enable && yarn install --frozen-lockfile
 RUN yarn prisma generate
 
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 RUN apk add --no-cache openssl
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -15,7 +15,7 @@ ENV NEXT_OUTPUT_MODE=standalone
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN yarn build
 
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 RUN apk add --no-cache openssl
 WORKDIR /app
 ENV NODE_ENV=production
