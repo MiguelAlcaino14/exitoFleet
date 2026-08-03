@@ -1,24 +1,49 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getFileUrl } from '@/lib/s3';
+import { getTallerScope, tallerWhere } from '@/lib/taller';
+
+const TIPOS_FOTO_VALIDOS = ['RECEPCION', 'DIAGNOSTICO', 'TRABAJO', 'ENTREGA'] as const;
+const CONTENT_TYPES_VALIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   try {
+    // M1: verificar que la OT pertenece al taller del usuario
+    const orden = await prisma.ordenTrabajo.findFirst({
+      where: { id: params.id, ...tallerWhere(scope) },
+    });
+    if (!orden) return NextResponse.json({ error: 'OT no encontrada' }, { status: 404 });
+
     const body = await req.json();
+
+    // M1: validar cloudStoragePath no vacío
+    if (!body?.cloud_storage_path?.trim()) {
+      return NextResponse.json({ error: 'cloud_storage_path requerido' }, { status: 400 });
+    }
+
+    // M1: validar tipoFoto contra enum
+    const tipoFoto = body?.tipoFoto ?? 'RECEPCION';
+    if (!TIPOS_FOTO_VALIDOS.includes(tipoFoto)) {
+      return NextResponse.json({ error: 'tipoFoto inválido' }, { status: 400 });
+    }
+
+    const contentType = body?.contentType ?? 'image/jpeg';
+    if (!CONTENT_TYPES_VALIDOS.includes(contentType)) {
+      return NextResponse.json({ error: 'contentType no permitido' }, { status: 400 });
+    }
+
     const foto = await prisma.fotografia.create({
       data: {
-        otId: params?.id,
-        cloudStoragePath: body?.cloud_storage_path,
+        otId: params.id,
+        cloudStoragePath: body.cloud_storage_path.trim(),
         isPublic: body?.isPublic ?? false,
-        tipoFoto: body?.tipoFoto ?? 'RECEPCION',
-        contentType: body?.contentType ?? 'image/jpeg',
+        tipoFoto,
+        contentType,
         fileName: body?.fileName || null,
       },
     });
@@ -29,15 +54,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   try {
-    const fotos = await prisma.fotografia.findMany({ where: { otId: params?.id }, orderBy: { fechaSubida: 'desc' } });
+    const orden = await prisma.ordenTrabajo.findFirst({
+      where: { id: params.id, ...tallerWhere(scope) },
+    });
+    if (!orden) return NextResponse.json({ error: 'OT no encontrada' }, { status: 404 });
+
+    const fotos = await prisma.fotografia.findMany({
+      where: { otId: params.id },
+      orderBy: { fechaSubida: 'desc' },
+    });
+
     const fotosConUrl = await Promise.all(
-      (fotos ?? []).map(async (f: any) => {
-        const url = await getFileUrl(f?.cloudStoragePath, f?.contentType ?? 'image/jpeg', f?.isPublic ?? false);
+      fotos.map(async (f) => {
+        const url = await getFileUrl(f.cloudStoragePath, f.contentType ?? 'image/jpeg', f.isPublic ?? false);
         return { ...f, url };
       })
     );

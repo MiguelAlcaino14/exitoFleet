@@ -76,11 +76,11 @@ export async function POST(req: NextRequest) {
 
     if (!vehiculoId) return NextResponse.json({ error: 'Vehículo requerido' }, { status: 400 });
 
-    // Calculate next OT number manually to avoid sequence conflicts
-    const lastOT = await prisma.ordenTrabajo.findFirst({ orderBy: { otNumero: 'desc' }, select: { otNumero: true } });
-    const nextOtNumero = (lastOT?.otNumero ?? 0) + 1;
-
-    const orden = await prisma.ordenTrabajo.create({
+    // M6: usar transacción Serializable para evitar race condition en otNumero
+    const orden = await prisma.$transaction(async (tx) => {
+      const last = await tx.ordenTrabajo.findFirst({ orderBy: { otNumero: 'desc' }, select: { otNumero: true } });
+      const nextOtNumero = (last?.otNumero ?? 0) + 1;
+      return tx.ordenTrabajo.create({
       data: {
         otNumero: nextOtNumero,
         vehiculoId,
@@ -111,7 +111,8 @@ export async function POST(req: NextRequest) {
         } : undefined,
       },
       include: { vehiculo: { include: { cliente: true } }, mecanico: true },
-    });
+      });
+    }, { isolationLevel: 'Serializable' });
 
     // Create initial timeline event
     await prisma.eventoTimeline.create({

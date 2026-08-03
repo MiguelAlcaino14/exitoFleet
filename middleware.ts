@@ -7,7 +7,8 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      // M5: rechazar sesión si el usuario fue desactivado en DB
+      authorized: ({ token }) => !!token && (token as any).error !== 'USER_INACTIVE',
     },
   }
 );

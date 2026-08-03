@@ -1,20 +1,17 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getTallerScope, tallerWhere } from '@/lib/taller';
 import bcrypt from 'bcryptjs';
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   try {
-    const scope = await getTallerScope();
     const users = await prisma.user.findMany({
-      where: { ...tallerWhere(scope!), rol: { not: 'SUPER_ADMIN' } },
+      where: { ...tallerWhere(scope), rol: { not: 'SUPER_ADMIN' } },
       select: { id: true, email: true, nombre: true, rol: true, activo: true, createdAt: true },
       orderBy: { createdAt: 'asc' },
     });
@@ -26,10 +23,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  const callerRole = (session.user as any).role;
-  if (callerRole !== 'ADMIN' && callerRole !== 'SUPER_ADMIN') {
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (scope.role !== 'ADMIN' && scope.role !== 'SUPER_ADMIN') {
     return NextResponse.json({ error: 'Solo administradores pueden crear usuarios' }, { status: 403 });
   }
 
@@ -38,6 +34,12 @@ export async function POST(req: NextRequest) {
     if (!body.email || !body.password || !body.nombre) {
       return NextResponse.json({ error: 'email, password y nombre son requeridos' }, { status: 400 });
     }
+
+    // M7: solo SUPER_ADMIN puede asignar rol SUPER_ADMIN
+    if (body.rol === 'SUPER_ADMIN' && scope.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+    }
+
     const existing = await prisma.user.findUnique({ where: { email: body.email } });
     if (existing) return NextResponse.json({ error: 'Ya existe un usuario con ese email' }, { status: 409 });
 
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
         nombre: body.nombre,
         rol: body.rol ?? 'JEFE_TALLER',
         activo: true,
-        tallerId: body.tallerId ?? (await getTallerScope())?.tallerId ?? undefined,
+        tallerId: scope.isSuperAdmin ? (body.tallerId ?? null) : scope.tallerId,
       },
       select: { id: true, email: true, nombre: true, rol: true, activo: true, createdAt: true },
     });
@@ -61,16 +63,24 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  const patchRole = (session.user as any).role;
-  if (patchRole !== 'ADMIN' && patchRole !== 'SUPER_ADMIN') {
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (scope.role !== 'ADMIN' && scope.role !== 'SUPER_ADMIN') {
     return NextResponse.json({ error: 'Solo administradores' }, { status: 403 });
   }
 
   try {
     const body = await req.json();
     if (!body.id) return NextResponse.json({ error: 'id requerido' }, { status: 400 });
+
+    // M7: solo SUPER_ADMIN puede asignar rol SUPER_ADMIN
+    if (body.rol === 'SUPER_ADMIN' && scope.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+    }
+
+    // M8: verificar que el usuario a modificar pertenece al mismo taller
+    const target = await prisma.user.findFirst({ where: { id: body.id, ...tallerWhere(scope) } });
+    if (!target) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
 
     const data: any = {};
     if (body.nombre !== undefined) data.nombre = body.nombre;

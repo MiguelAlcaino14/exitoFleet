@@ -19,10 +19,16 @@ export async function GET(req: NextRequest) {
     const page = parseInt(url.searchParams.get('page') ?? '1');
     const pageSize = 20;
 
+    const ESTADOS_VALIDOS = ['POR_DIAGNOSTICAR', 'EN_COTIZACION', 'ESPERANDO_APROBACION', 'EN_TRABAJO', 'POR_FACTURAR', 'CERRADA'];
+
     const scope = await getTallerScope();
     const where: any = { ...tallerWhere(scope!) };
 
     if (estado && estado !== 'TODAS') {
+      // M4: validar estado contra enum antes de pasarlo a Prisma
+      if (!ESTADOS_VALIDOS.includes(estado)) {
+        return NextResponse.json({ error: 'Estado inválido' }, { status: 400 });
+      }
       where.estado = estado;
     }
 
