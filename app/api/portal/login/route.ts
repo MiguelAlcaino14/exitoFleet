@@ -5,7 +5,8 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { SignJWT } from 'jose';
 
-const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || 'fallback-secret');
+if (!process.env.NEXTAUTH_SECRET) throw new Error('NEXTAUTH_SECRET no está configurado');
+const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,7 +29,13 @@ export async function POST(req: NextRequest) {
       .sign(SECRET);
 
     const res = NextResponse.json({ ok: true, razonSocial: cliente.razonSocial });
-    res.cookies.set('portal_token', token, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 7 * 24 * 3600 });
+    res.cookies.set('portal_token', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 3600,
+      secure: process.env.NODE_ENV === 'production',
+    });
     return res;
   } catch (err: any) {
     console.error('Portal login error:', err);

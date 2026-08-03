@@ -1,18 +1,17 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { getTallerScope, tallerWhere } from '@/lib/taller';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   try {
-    const cliente = await prisma.cliente.findUnique({
-      where: { id: params.id },
+    const cliente = await prisma.cliente.findFirst({
+      where: { id: params.id, ...tallerWhere(scope) },
       include: {
         vehiculos: {
           include: {
@@ -38,7 +37,6 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     });
 
     if (!cliente) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
-    // Don't expose actual hash, just boolean
     return NextResponse.json({ ...cliente, passwordHash: !!cliente.passwordHash });
   } catch (err: any) {
     console.error('Cliente GET error:', err);
@@ -47,11 +45,18 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (scope.role !== 'ADMIN' && scope.role !== 'SUPER_ADMIN') {
+    return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+  }
 
   try {
-    // Check if client has vehicles with OTs
+    const cliente = await prisma.cliente.findFirst({
+      where: { id: params.id, ...tallerWhere(scope) },
+    });
+    if (!cliente) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
+
     const vehiculosConOTs = await prisma.vehiculo.findMany({
       where: { clienteId: params.id },
       include: { _count: { select: { ordenes: true } } },
@@ -65,7 +70,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    // Delete in order: contacts, vehicles (no OTs), then client
     await prisma.$transaction([
       prisma.contactoCliente.deleteMany({ where: { clienteId: params.id } }),
       prisma.vehiculo.deleteMany({ where: { clienteId: params.id } }),
@@ -80,13 +84,25 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   try {
     const body = await req.json();
-    const data: any = {};
 
+    // Solo ADMIN puede cambiar el password del portal del cliente
+    if (body?.portalPassword !== undefined) {
+      if (scope.role !== 'ADMIN' && scope.role !== 'SUPER_ADMIN') {
+        return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+      }
+    }
+
+    const cliente = await prisma.cliente.findFirst({
+      where: { id: params.id, ...tallerWhere(scope) },
+    });
+    if (!cliente) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
+
+    const data: any = {};
     if (body?.razonSocial !== undefined) data.razonSocial = body.razonSocial;
     if (body?.rutEmpresa !== undefined) data.rutEmpresa = body.rutEmpresa || null;
     if (body?.giro !== undefined) data.giro = body.giro || null;

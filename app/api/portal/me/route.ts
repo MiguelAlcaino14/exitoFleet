@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { prisma } from '@/lib/db';
 
-const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || 'fallback-secret');
+if (!process.env.NEXTAUTH_SECRET) throw new Error('NEXTAUTH_SECRET no está configurado');
+const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
 
 export async function GET(req: NextRequest) {
   const token = req.cookies.get('portal_token')?.value;

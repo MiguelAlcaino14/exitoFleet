@@ -27,5 +27,7 @@ export async function getTallerScope() {
  */
 export function tallerWhere(scope: { tallerId: string | null; isSuperAdmin: boolean }) {
   if (scope.isSuperAdmin) return {};
-  return scope.tallerId ? { tallerId: scope.tallerId } : {};
+  if (scope.tallerId) return { tallerId: scope.tallerId };
+  // Usuario sin taller asignado y sin SUPER_ADMIN: no debe ver nada
+  return { tallerId: '__NINGUNO__' };
 }

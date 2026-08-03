@@ -1,15 +1,19 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getTallerScope, tallerWhere } from '@/lib/taller';
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   try {
+    const vehiculo = await prisma.vehiculo.findFirst({
+      where: { id: params.id, ...tallerWhere(scope) },
+    });
+    if (!vehiculo) return NextResponse.json({ error: 'Vehículo no encontrado' }, { status: 404 });
+
     const body = await req.json();
     const data: any = {};
 
@@ -43,11 +47,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (scope.role !== 'ADMIN' && scope.role !== 'SUPER_ADMIN') {
+    return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+  }
 
   try {
-    // Check if vehicle has OTs
+    const vehiculo = await prisma.vehiculo.findFirst({
+      where: { id: params.id, ...tallerWhere(scope) },
+    });
+    if (!vehiculo) return NextResponse.json({ error: 'Vehículo no encontrado' }, { status: 404 });
+
     const otCount = await prisma.ordenTrabajo.count({ where: { vehiculoId: params.id } });
     if (otCount > 0) {
       return NextResponse.json(

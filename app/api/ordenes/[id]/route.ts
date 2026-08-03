@@ -1,17 +1,16 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getTallerScope, tallerWhere } from '@/lib/taller';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   try {
-    const orden = await prisma.ordenTrabajo.findUnique({
-      where: { id: params?.id },
+    const orden = await prisma.ordenTrabajo.findFirst({
+      where: { id: params?.id, ...tallerWhere(scope) },
       include: {
         vehiculo: { include: { cliente: true } },
         mecanico: true,
@@ -29,17 +28,21 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   try {
+    const orden = await prisma.ordenTrabajo.findFirst({
+      where: { id: params?.id, ...tallerWhere(scope) },
+    });
+    if (!orden) return NextResponse.json({ error: 'OT no encontrada' }, { status: 404 });
+
     const body = await req.json();
     const data: any = {};
     const now = new Date();
 
     if (body?.estado !== undefined) {
       data.estado = body.estado;
-      // Set timestamps based on state transition
       if (body.estado === 'EN_COTIZACION') data.fechaDiagnostico = now;
       if (body.estado === 'ESPERANDO_APROBACION') data.fechaValorizacion = now;
       if (body.estado === 'EN_TRABAJO') {
