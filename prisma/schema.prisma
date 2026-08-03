@@ -1,0 +1,291 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  SUPER_ADMIN
+  ADMIN
+  JEFE_TALLER
+  RECEPCION
+  FINANZAS
+  CLIENTE
+}
+
+model Taller {
+  id              String    @id @default(cuid())
+  nombre          String
+  slug            String    @unique
+  razonSocial     String    @default("")
+  rut             String    @default("")
+  direccion       String    @default("")
+  telefono        String    @default("")
+  celular         String    @default("")
+  email           String    @default("")
+  division        String    @default("")
+  logoUrl         String    @default("")
+  colorPrimario   String    @default("#F4B63D")
+  colorFondo      String    @default("#121212")
+  activo          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  usuarios        User[]
+  clientes        Cliente[]
+  vehiculos       Vehiculo[]
+  ordenes         OrdenTrabajo[]
+  mecanicos       Mecanico[]
+  facturas        Factura[]
+  cuentasCorreo   CuentaCorreo[]
+}
+
+model ConfiguracionTaller {
+  id              String    @id @default("singleton")
+  razonSocial     String    @default("")
+  rut             String    @default("")
+  direccion       String    @default("")
+  telefono        String    @default("")
+  celular         String    @default("")
+  email           String    @default("")
+  division        String    @default("")
+  logoUrl         String    @default("")
+  updatedAt       DateTime  @updatedAt
+}
+
+enum EstadoOT {
+  POR_DIAGNOSTICAR
+  EN_COTIZACION
+  ESPERANDO_APROBACION
+  EN_TRABAJO
+  POR_FACTURAR
+  CERRADA
+}
+
+enum TipoFoto {
+  RECEPCION
+  DIAGNOSTICO
+  TRABAJO
+  ENTREGA
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  nombre        String
+  rol           Rol       @default(JEFE_TALLER)
+  activo        Boolean   @default(true)
+  tallerId      String?
+  taller        Taller?   @relation(fields: [tallerId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  ordenes       OrdenTrabajo[] @relation("creador")
+}
+
+model Cliente {
+  id              String    @id @default(cuid())
+  rutEmpresa      String?   @unique
+  razonSocial     String
+  giro            String?
+  nombreContacto  String?
+  email           String?
+  telefono        String?
+  direccion       String?
+  passwordHash    String?
+  activo          Boolean   @default(true)
+  tallerId        String?
+  taller          Taller?   @relation(fields: [tallerId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  vehiculos       Vehiculo[]
+  contactos       ContactoCliente[]
+  eventos         EventoCliente[]
+}
+
+model EventoCliente {
+  id          String   @id @default(cuid())
+  clienteId   String
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  titulo      String
+  descripcion String?
+  usuario     String?
+  tipoEvento  String   @default("sistema")
+  createdAt   DateTime @default(now())
+}
+
+model ContactoCliente {
+  id              String    @id @default(cuid())
+  clienteId       String
+  cliente         Cliente   @relation(fields: [clienteId], references: [id])
+  nombre          String
+  cargo           String?
+  email           String
+  telefono        String?
+  predeterminado  Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model CuentaCorreo {
+  id              String    @id @default(cuid())
+  nombre          String
+  email           String
+  predeterminada  Boolean   @default(false)
+  activa          Boolean   @default(true)
+  tallerId        String?
+  taller          Taller?   @relation(fields: [tallerId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Mecanico {
+  id        String    @id @default(cuid())
+  nombre    String
+  activo    Boolean   @default(true)
+  tallerId  String?
+  taller    Taller?   @relation(fields: [tallerId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  ordenes   OrdenTrabajo[]
+}
+
+model Vehiculo {
+  id              String    @id @default(cuid())
+  patente         String    @unique
+  marca           String?
+  modelo          String?
+  tipoVehiculo    String?
+  anio            Int?
+  motor           String?
+  chasis          String?
+  vin             String?
+  clienteId       String
+  cliente         Cliente   @relation(fields: [clienteId], references: [id])
+  tallerId        String?
+  taller          Taller?   @relation(fields: [tallerId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  ordenes         OrdenTrabajo[]
+}
+
+model OrdenTrabajo {
+  id                    String       @id @default(cuid())
+  otNumero              Int          @unique @default(autoincrement())
+  vehiculoId            String
+  vehiculo              Vehiculo     @relation(fields: [vehiculoId], references: [id])
+  fechaIngreso          DateTime     @default(now())
+  kilometraje           Int?
+  nivelCombustible      String?
+  motivoIngreso         String?
+  estado                EstadoOT     @default(POR_DIAGNOSTICAR)
+  conductorNombre       String?
+  conductorRut          String?
+  conductorTelefono     String?
+  fechaDiagnostico      DateTime?
+  diagnosticoMecanico   String?
+  fechaValorizacion     DateTime?
+  valorRepuestos        Float?       @default(0)
+  valorManoObra         Float?       @default(0)
+  valorTotal            Float?       @default(0)
+  fechaAprobacion       DateTime?
+  fechaInicioTrabajo    DateTime?
+  fechaTermino          DateTime?
+  fechaFacturacion      DateTime?
+  observaciones         String?
+  mecanicoId            String?
+  mecanico              Mecanico?    @relation(fields: [mecanicoId], references: [id])
+  usuarioCreadorId      String
+  usuarioCreador        User         @relation("creador", fields: [usuarioCreadorId], references: [id])
+  tallerId              String?
+  taller                Taller?      @relation(fields: [tallerId], references: [id])
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  checklist             ChecklistRecepcion?
+  fotografias           Fotografia[]
+  itemsValorizacion     ItemValorizacion[]
+  eventosTimeline       EventoTimeline[]
+  facturas              Factura[]
+}
+
+model ChecklistRecepcion {
+  id                  String       @id @default(cuid())
+  otId                String       @unique
+  ordenTrabajo        OrdenTrabajo @relation(fields: [otId], references: [id])
+  gato                Boolean      @default(false)
+  llaveRuedas         Boolean      @default(false)
+  ruedaRepuesto       Boolean      @default(false)
+  triangulos          Boolean      @default(false)
+  extintor            Boolean      @default(false)
+  botiquin            Boolean      @default(false)
+  documentos          Boolean      @default(false)
+  estadoCarroceria    String?
+  nivelAceite         String?
+  nivelLiquidoFrenos  String?
+  observaciones       String?
+  createdAt           DateTime     @default(now())
+}
+
+enum TipoItemValorizacion {
+  REPUESTO
+  INSUMO
+  SERVICIO
+  MANO_DE_OBRA
+  DESCUENTO
+}
+
+model ItemValorizacion {
+  id              String                @id @default(cuid())
+  otId            String
+  ordenTrabajo    OrdenTrabajo          @relation(fields: [otId], references: [id])
+  tipo            TipoItemValorizacion  @default(REPUESTO)
+  descripcion     String
+  cantidad        Float                 @default(1)
+  costoUnitario   Float                 @default(0)
+  margen          Float                 @default(0)
+  precioVenta     Float                 @default(0)
+  orden           Int                   @default(0)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+}
+
+model Factura {
+  id              String       @id @default(cuid())
+  numero          String       @unique
+  otId            String
+  ordenTrabajo    OrdenTrabajo @relation(fields: [otId], references: [id])
+  montoNeto       Float        @default(0)
+  iva             Float        @default(0)
+  montoTotal      Float        @default(0)
+  fechaEmision    DateTime     @default(now())
+  observaciones   String?
+  tallerId        String?
+  taller          Taller?      @relation(fields: [tallerId], references: [id])
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model EventoTimeline {
+  id              String       @id @default(cuid())
+  otId            String
+  ordenTrabajo    OrdenTrabajo @relation(fields: [otId], references: [id])
+  titulo          String
+  descripcion     String?
+  usuario         String?
+  tipoEvento      String       @default("sistema")
+  createdAt       DateTime     @default(now())
+}
+
+model Fotografia {
+  id                String       @id @default(cuid())
+  otId              String
+  ordenTrabajo      OrdenTrabajo @relation(fields: [otId], references: [id])
+  cloudStoragePath  String
+  isPublic          Boolean      @default(false)
+  tipoFoto          TipoFoto     @default(RECEPCION)
+  contentType       String       @default("image/jpeg")
+  fileName          String?
+  fechaSubida       DateTime     @default(now())
+}
