@@ -6,10 +6,12 @@ import { prisma } from '@/lib/db';
 import { SignJWT } from 'jose';
 import { checkRateLimit } from '@/lib/rate-limit';
 
-if (!process.env.NEXTAUTH_SECRET) throw new Error('NEXTAUTH_SECRET no está configurado');
-const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
-
 const MAX_INTENTOS = 5;
+
+function getSecret(): Uint8Array {
+  if (!process.env.NEXTAUTH_SECRET) throw new Error('NEXTAUTH_SECRET no está configurado');
+  return new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+}
 
 export async function POST(req: NextRequest) {
   // A9: rate limiting por IP
@@ -39,7 +41,7 @@ export async function POST(req: NextRequest) {
     const token = await new SignJWT({ clienteId: cliente.id, razonSocial: cliente.razonSocial })
       .setProtectedHeader({ alg: 'HS256' })
       .setExpirationTime('7d')
-      .sign(SECRET);
+      .sign(getSecret());
 
     const res = NextResponse.json({ ok: true, razonSocial: cliente.razonSocial });
     res.cookies.set('portal_token', token, {

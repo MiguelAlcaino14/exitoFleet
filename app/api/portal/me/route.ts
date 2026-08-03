@@ -4,15 +4,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { prisma } from '@/lib/db';
 
-if (!process.env.NEXTAUTH_SECRET) throw new Error('NEXTAUTH_SECRET no está configurado');
-const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+function getSecret(): Uint8Array {
+  if (!process.env.NEXTAUTH_SECRET) throw new Error('NEXTAUTH_SECRET no está configurado');
+  return new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+}
 
 export async function GET(req: NextRequest) {
   const token = req.cookies.get('portal_token')?.value;
   if (!token) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   try {
-    const { payload } = await jwtVerify(token, SECRET);
+    const { payload } = await jwtVerify(token, getSecret());
     const clienteId = payload.clienteId as string;
 
     const cliente = await prisma.cliente.findUnique({
@@ -56,7 +58,7 @@ async function getClienteId(req: NextRequest): Promise<string | null> {
   const token = req.cookies.get('portal_token')?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, SECRET);
+    const { payload } = await jwtVerify(token, getSecret());
     return (payload.clienteId as string) ?? null;
   } catch {
     return null;
