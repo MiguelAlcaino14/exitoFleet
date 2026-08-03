@@ -4,11 +4,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { SignJWT } from 'jose';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 if (!process.env.NEXTAUTH_SECRET) throw new Error('NEXTAUTH_SECRET no está configurado');
 const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
 
+const MAX_INTENTOS = 5;
+
 export async function POST(req: NextRequest) {
+  // A9: rate limiting por IP
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
+  const { allowed } = checkRateLimit(`portal_login:${ip}`, MAX_INTENTOS);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Demasiados intentos. Espere 15 minutos antes de intentar nuevamente.' },
+      { status: 429 }
+    );
+  }
+
   try {
     const { rut, password } = await req.json();
     if (!rut || !password) return NextResponse.json({ error: 'RUT y contraseña requeridos' }, { status: 400 });

@@ -1,16 +1,40 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getTallerScope, tallerWhere } from '@/lib/taller';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+async function recalcularTotales(otId: string) {
+  const allItems = await prisma.itemValorizacion.findMany({ where: { otId } });
+  const valorRepuestos = allItems
+    .filter(i => ['REPUESTO', 'INSUMO'].includes(i.tipo))
+    .reduce((acc, i) => acc + i.precioVenta * i.cantidad, 0);
+  const valorManoObra = allItems
+    .filter(i => i.tipo === 'MANO_DE_OBRA')
+    .reduce((acc, i) => acc + i.precioVenta * i.cantidad, 0);
+  const valorServicios = allItems
+    .filter(i => i.tipo === 'SERVICIO')
+    .reduce((acc, i) => acc + i.precioVenta * i.cantidad, 0);
+  const valorDescuentos = allItems
+    .filter(i => i.tipo === 'DESCUENTO')
+    .reduce((acc, i) => acc + i.precioVenta * i.cantidad, 0);
+  const valorTotal = valorRepuestos + valorManoObra + valorServicios - valorDescuentos;
+  await prisma.ordenTrabajo.update({
+    where: { id: otId },
+    data: { valorRepuestos, valorManoObra, valorTotal },
+  });
+}
+
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
   try {
+    const orden = await prisma.ordenTrabajo.findFirst({ where: { id: params.id, ...tallerWhere(scope) } });
+    if (!orden) return NextResponse.json({ error: 'OT no encontrada' }, { status: 404 });
+
     const items = await prisma.itemValorizacion.findMany({
-      where: { otId: params?.id },
+      where: { otId: params.id },
       orderBy: [{ tipo: 'asc' }, { orden: 'asc' }, { createdAt: 'asc' }],
     });
     return NextResponse.json(items);
@@ -21,13 +45,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
   try {
+    const orden = await prisma.ordenTrabajo.findFirst({ where: { id: params.id, ...tallerWhere(scope) } });
+    if (!orden) return NextResponse.json({ error: 'OT no encontrada' }, { status: 404 });
+
     const body = await req.json();
     const item = await prisma.itemValorizacion.create({
       data: {
-        otId: params?.id,
+        otId: params.id,
         tipo: body?.tipo ?? 'REPUESTO',
         descripcion: body?.descripcion ?? '',
         cantidad: parseFloat(body?.cantidad) || 1,
@@ -38,27 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       },
     });
 
-    // Recalculate totals on OrdenTrabajo
-    const allItems = await prisma.itemValorizacion.findMany({ where: { otId: params?.id } });
-    const valorRepuestos = allItems
-      .filter(i => ['REPUESTO', 'INSUMO'].includes(i.tipo))
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorManoObra = allItems
-      .filter(i => i.tipo === 'MANO_DE_OBRA')
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorServicios = allItems
-      .filter(i => i.tipo === 'SERVICIO')
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorDescuentos = allItems
-      .filter(i => i.tipo === 'DESCUENTO')
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorTotal = valorRepuestos + valorManoObra + valorServicios - valorDescuentos;
-
-    await prisma.ordenTrabajo.update({
-      where: { id: params?.id },
-      data: { valorRepuestos, valorManoObra, valorTotal },
-    });
-
+    await recalcularTotales(params.id);
     return NextResponse.json(item, { status: 201 });
   } catch (err: any) {
     console.error('Items POST error:', err);
@@ -67,36 +75,25 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
   try {
     const { searchParams } = new URL(req.url);
     const itemId = searchParams.get('itemId');
     if (!itemId) return NextResponse.json({ error: 'itemId requerido' }, { status: 400 });
 
-    await prisma.itemValorizacion.delete({ where: { id: itemId } });
-
-    // Recalculate totals
-    const allItems = await prisma.itemValorizacion.findMany({ where: { otId: params?.id } });
-    const valorRepuestos = allItems
-      .filter(i => ['REPUESTO', 'INSUMO'].includes(i.tipo))
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorManoObra = allItems
-      .filter(i => i.tipo === 'MANO_DE_OBRA')
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorServicios = allItems
-      .filter(i => i.tipo === 'SERVICIO')
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorDescuentos = allItems
-      .filter(i => i.tipo === 'DESCUENTO')
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorTotal = valorRepuestos + valorManoObra + valorServicios - valorDescuentos;
-
-    await prisma.ordenTrabajo.update({
-      where: { id: params?.id },
-      data: { valorRepuestos, valorManoObra, valorTotal },
+    // A6: verificar que el item pertenece a esta OT y que la OT pertenece al taller
+    const item = await prisma.itemValorizacion.findFirst({
+      where: { id: itemId, otId: params.id },
     });
+    if (!item) return NextResponse.json({ error: 'Item no encontrado' }, { status: 404 });
 
+    const orden = await prisma.ordenTrabajo.findFirst({ where: { id: params.id, ...tallerWhere(scope) } });
+    if (!orden) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+
+    await prisma.itemValorizacion.delete({ where: { id: itemId } });
+    await recalcularTotales(params.id);
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     console.error('Items DELETE error:', err);
@@ -105,12 +102,22 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
   try {
     const body = await req.json();
     const itemId = body?.itemId;
     if (!itemId) return NextResponse.json({ error: 'itemId requerido' }, { status: 400 });
+
+    // A6: verificar que el item pertenece a esta OT y que la OT pertenece al taller
+    const item = await prisma.itemValorizacion.findFirst({
+      where: { id: itemId, otId: params.id },
+    });
+    if (!item) return NextResponse.json({ error: 'Item no encontrado' }, { status: 404 });
+
+    const orden = await prisma.ordenTrabajo.findFirst({ where: { id: params.id, ...tallerWhere(scope) } });
+    if (!orden) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
 
     const data: any = {};
     if (body?.descripcion !== undefined) data.descripcion = body.descripcion;
@@ -120,28 +127,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (body?.precioVenta !== undefined) data.precioVenta = parseFloat(body.precioVenta) || 0;
 
     await prisma.itemValorizacion.update({ where: { id: itemId }, data });
-
-    // Recalculate totals
-    const allItems = await prisma.itemValorizacion.findMany({ where: { otId: params?.id } });
-    const valorRepuestos = allItems
-      .filter(i => ['REPUESTO', 'INSUMO'].includes(i.tipo))
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorManoObra = allItems
-      .filter(i => i.tipo === 'MANO_DE_OBRA')
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorServicios = allItems
-      .filter(i => i.tipo === 'SERVICIO')
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorDescuentos = allItems
-      .filter(i => i.tipo === 'DESCUENTO')
-      .reduce((acc, i) => acc + (i.precioVenta * i.cantidad), 0);
-    const valorTotal = valorRepuestos + valorManoObra + valorServicios - valorDescuentos;
-
-    await prisma.ordenTrabajo.update({
-      where: { id: params?.id },
-      data: { valorRepuestos, valorManoObra, valorTotal },
-    });
-
+    await recalcularTotales(params.id);
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     console.error('Items PATCH error:', err);

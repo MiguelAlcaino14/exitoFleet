@@ -3,6 +3,9 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const MAX_INTENTOS_LOGIN = 10;
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -15,6 +18,11 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        // A10: rate limiting por email para evitar brute force
+        const { allowed } = checkRateLimit(`nextauth_login:${credentials.email.toLowerCase()}`, MAX_INTENTOS_LOGIN);
+        if (!allowed) return null;
+
         const user = await prisma.user.findUnique({ where: { email: credentials.email } });
         if (!user || !user?.activo) return null;
         const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
@@ -41,7 +49,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  session: { strategy: 'jwt' },
+  session: { strategy: 'jwt', maxAge: 8 * 60 * 60 }, // 8 horas
   pages: {
     signIn: '/auth/login',
   },

@@ -29,12 +29,15 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  // A7: solo ADMIN puede modificar configuración del taller
+  if (scope.role !== 'ADMIN' && scope.role !== 'SUPER_ADMIN') {
+    return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+  }
 
   try {
     const body = await req.json();
-    const scope = await getTallerScope();
 
     // Si el usuario pertenece a un taller, actualizar el taller
     if (scope?.tallerId) {
