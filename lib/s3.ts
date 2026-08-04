@@ -22,7 +22,12 @@ export async function getFileUrl(cloud_storage_path: string, contentType: string
   const { bucketName } = getBucketConfig();
   if (isPublic) {
     const region = process.env.AWS_REGION ?? 'us-east-1';
-    return `https://${bucketName}.s3.${region}.amazonaws.com/${cloud_storage_path.split('/').map(encodeURIComponent).join('/')}`;
+    const endpoint = process.env.AWS_ENDPOINT;
+    const encodedPath = cloud_storage_path.split('/').map(encodeURIComponent).join('/');
+    if (endpoint) {
+      return `https://${bucketName}.${region}.digitaloceanspaces.com/${encodedPath}`;
+    }
+    return `https://${bucketName}.s3.${region}.amazonaws.com/${encodedPath}`;
   }
   const s3 = createS3Client();
   const command = new GetObjectCommand({
