@@ -11,24 +11,19 @@ const jakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-di
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
 
 export const metadata = {
-  title: 'Éxito Fleet Management',
-  description: 'ERP especializado para talleres de camiones y flotas de transporte',
+  title: 'D Motor',
+  description: 'Sistema de gestión para talleres mecánicos',
   metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
   icons: {
-    icon: '/favicon.svg',
-    shortcut: '/favicon.svg',
-  },
-  openGraph: {
-    images: ['/og-image.png'],
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <head>
-        <script src="https://apps.abacus.ai/chatllm/appllm-lib.js" />
-      </head>
+
       <body className={`${dmSans.variable} ${jakartaSans.variable} ${jetbrainsMono.variable} font-sans`}>
         <Providers>
           {children}

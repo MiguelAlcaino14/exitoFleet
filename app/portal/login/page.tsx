@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Truck, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -72,10 +73,7 @@ export default function PortalLoginPage() {
 
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-xl bg-[#F4B63D]/10 border border-[#F4B63D]/30 flex items-center justify-center mx-auto mb-4">
-            <Truck className="w-8 h-8 text-[#F4B63D]" />
-          </div>
-          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">ÉXITO Fleet</h1>
+          <Image src="/logo.png" alt="D Motor" width={180} height={54} className="object-contain mx-auto mb-2" priority />
           <p className="text-muted-foreground text-sm mt-1">Portal de Clientes</p>
         </div>
 

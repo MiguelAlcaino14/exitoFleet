@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Truck, Eye, EyeOff, LogIn } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,13 +46,7 @@ export default function LoginPage() {
       <div className="absolute top-4 right-4"><ThemeToggleButton /></div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-            <Truck className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground tracking-tight font-display">
-            <span className="text-primary">ÉXITO</span>
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">Fleet Management</p>
+          <Image src="/logo.png" alt="D Motor" width={180} height={54} className="object-contain mx-auto mb-2" priority />
         </div>
         <div className="bg-card border border-border rounded-xl p-8">
           <h2 className="text-xl font-semibold text-foreground mb-6">Iniciar Sesión</h2>
@@ -74,7 +69,7 @@ export default function LoginPage() {
             </Button>
           </form>
         </div>
-        <p className="text-center text-muted-foreground text-xs mt-6">© 2026 Éxito Fleet Management</p>
+        <p className="text-center text-muted-foreground text-xs mt-6">© 2026 D Motor</p>
       </div>
     </div>
   );

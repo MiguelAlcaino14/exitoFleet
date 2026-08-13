@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Menu, X, LayoutDashboard, Plus, Columns3, Users, LogOut, Settings, DollarSign, ClipboardList, Truck, ShieldCheck } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -58,12 +59,7 @@ export function MobileSidebar({ user }: MobileSidebarProps) {
           <div className="fixed left-0 top-0 bottom-0 z-50 w-[260px] bg-card border-r border-border flex flex-col md:hidden">
             {/* Header */}
             <div className="p-5 border-b border-border flex items-center justify-between">
-              <div>
-                <div className="text-foreground font-black text-xl tracking-[2px]">
-                  <span className="text-primary">ÉXITO</span>
-                </div>
-                <div className="text-muted-foreground text-[9px] tracking-[2px] uppercase font-bold mt-0.5">Fleet Management</div>
-              </div>
+              <Image src="/logo.png" alt="D Motor" width={120} height={36} className="object-contain" priority />
               <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="w-5 h-5" />
               </button>

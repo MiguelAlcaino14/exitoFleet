@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { LayoutDashboard, Plus, Columns3, Users, LogOut, ChevronLeft, ChevronRight, Settings, DollarSign, ClipboardList, Truck, ShieldCheck } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -55,16 +56,9 @@ export function AppSidebar({ user }: SidebarProps) {
         <div className="p-5 border-b border-border">
           <div className="flex items-center gap-3">
             {!collapsed ? (
-              <div>
-                <div className="text-foreground font-black text-xl tracking-[2px]">
-                  <span className="text-primary">ÉXITO</span>
-                </div>
-                <div className="text-muted-foreground text-[9px] tracking-[2px] uppercase font-bold mt-0.5">Fleet Management</div>
-              </div>
+              <Image src="/logo.png" alt="D Motor" width={120} height={36} className="object-contain" priority />
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <span className="text-primary font-black text-sm">É</span>
-              </div>
+              <Image src="/favicon.png" alt="D Motor" width={36} height={36} className="object-contain" priority />
             )}
           </div>
         </div>
