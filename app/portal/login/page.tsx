@@ -113,7 +113,7 @@ export default function PortalLoginPage() {
             </div>
           </div>
           {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-          <Button type="submit" disabled={loading} className="w-full bg-[#F4B63D] hover:bg-[#D9A234] text-[#121212] font-black tracking-wider">
+          <Button type="submit" disabled={loading} className="w-full font-black tracking-wider">
             {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} INGRESAR
           </Button>
         </form>

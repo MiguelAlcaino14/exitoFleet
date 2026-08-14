@@ -16,7 +16,7 @@ const ESTADOS: Record<string, { label: string; color: string }> = {
   EN_COTIZACION: { label: 'En Cotización', color: 'bg-orange-500/20 text-orange-400' },
   ESPERANDO_APROBACION: { label: 'Esp. Aprobación', color: 'bg-yellow-500/20 text-yellow-400' },
   EN_TRABAJO: { label: 'En Trabajo', color: 'bg-emerald-500/20 text-emerald-400' },
-  POR_FACTURAR: { label: 'Por Facturar', color: 'bg-[#F4B63D]/20 text-[#F4B63D]' },
+  POR_FACTURAR: { label: 'Por Facturar', color: 'bg-[hsl(217,74%,45%)]/20 text-[hsl(217,74%,45%)]' },
   CERRADA: { label: 'Cerrada', color: 'bg-zinc-500/20 text-zinc-400' },
 };
 
@@ -80,7 +80,7 @@ export default function PortalDashboard() {
 
   if (loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-[#F4B63D]" />
+      <Loader2 className="w-8 h-8 animate-spin text-[hsl(217,74%,45%)]" />
     </div>
   );
 
@@ -94,8 +94,8 @@ export default function PortalDashboard() {
       <header className="bg-card border-b border-border px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#F4B63D]/10 border border-[#F4B63D]/30 flex items-center justify-center">
-              <Truck className="w-5 h-5 text-[#F4B63D]" />
+            <div className="w-10 h-10 rounded-lg bg-[hsl(217,74%,45%)]/10 border border-[hsl(217,74%,45%)]/30 flex items-center justify-center">
+              <Truck className="w-5 h-5 text-[hsl(217,74%,45%)]" />
             </div>
             <div>
               <h1 className="font-extrabold text-lg tracking-tight">ÉXITO Fleet</h1>
@@ -134,7 +134,7 @@ export default function PortalDashboard() {
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <p className="text-[10px] font-bold text-muted-foreground tracking-widest">EN PROCESO</p>
-              <p className="text-3xl font-black text-[#F4B63D] mt-1">{ordenes.filter((o: any) => o.estado !== 'CERRADA').length}</p>
+              <p className="text-3xl font-black text-[hsl(217,74%,45%)] mt-1">{ordenes.filter((o: any) => o.estado !== 'CERRADA').length}</p>
             </CardContent>
           </Card>
           <Card className="bg-card border-border">
@@ -148,15 +148,15 @@ export default function PortalDashboard() {
         {/* Tabs */}
         <div className="flex gap-1 mb-6">
           <button onClick={() => setTab('ordenes')}
-            className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'ordenes' ? 'border-[#F4B63D] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+            className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'ordenes' ? 'border-[hsl(217,74%,45%)] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
             <FileText className="w-4 h-4 inline mr-2" /> Órdenes de Trabajo
           </button>
           <button onClick={() => setTab('vehiculos')}
-            className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'vehiculos' ? 'border-[#F4B63D] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+            className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'vehiculos' ? 'border-[hsl(217,74%,45%)] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
             <Truck className="w-4 h-4 inline mr-2" /> Vehículos
           </button>
           <button onClick={() => setTab('datos')}
-            className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'datos' ? 'border-[#F4B63D] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+            className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'datos' ? 'border-[hsl(217,74%,45%)] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
             <UserCog className="w-4 h-4 inline mr-2" /> Mis Datos
           </button>
         </div>
@@ -178,8 +178,8 @@ export default function PortalDashboard() {
                       <Link key={ot.id} href={`/portal/ot/${ot.id}`}
                         className="flex items-center justify-between p-4 hover:bg-muted/50 transition cursor-pointer">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-lg bg-[#F4B63D]/10 flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-[#F4B63D]" />
+                          <div className="w-10 h-10 rounded-lg bg-[hsl(217,74%,45%)]/10 flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-[hsl(217,74%,45%)]" />
                           </div>
                           <div>
                             <p className="font-bold text-sm">OT-{String(ot.otNumero).padStart(4, '0')}</p>
@@ -242,7 +242,7 @@ export default function PortalDashboard() {
           <div className="space-y-6 max-w-3xl">
             <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><UserCog className="w-4 h-4 text-[#F4B63D]" /> Mis Datos</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><UserCog className="w-4 h-4 text-[hsl(217,74%,45%)]" /> Mis Datos</CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">Puedes revisar y actualizar tus datos de contacto en cualquier momento. Los cambios quedan registrados en el historial del taller conforme a la Ley de Protección de Datos Personales.</p>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -278,7 +278,7 @@ export default function PortalDashboard() {
                   </div>
                 </div>
                 <div className="pt-2">
-                  <Button onClick={guardarDatos} disabled={saving || !form.razonSocial.trim()} className="bg-[#F4B63D] hover:bg-[#F4B63D]/90 text-black">
+                  <Button onClick={guardarDatos} disabled={saving || !form.razonSocial.trim()} className="bg-[hsl(217,74%,45%)] hover:bg-[hsl(217,74%,45%)]/90 text-black">
                     {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                     {saving ? 'Guardando...' : 'Guardar cambios'}
                   </Button>

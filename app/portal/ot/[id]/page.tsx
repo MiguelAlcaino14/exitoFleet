@@ -13,7 +13,7 @@ const ESTADOS: Record<string, { label: string; color: string }> = {
   EN_COTIZACION: { label: 'En Cotización', color: 'bg-orange-500/20 text-orange-400' },
   ESPERANDO_APROBACION: { label: 'Esp. Aprobación', color: 'bg-yellow-500/20 text-yellow-400' },
   EN_TRABAJO: { label: 'En Trabajo', color: 'bg-emerald-500/20 text-emerald-400' },
-  POR_FACTURAR: { label: 'Por Facturar', color: 'bg-[#F4B63D]/20 text-[#F4B63D]' },
+  POR_FACTURAR: { label: 'Por Facturar', color: 'bg-[hsl(217,74%,45%)]/20 text-[hsl(217,74%,45%)]' },
   CERRADA: { label: 'Cerrada', color: 'bg-zinc-500/20 text-zinc-400' },
 };
 
@@ -52,7 +52,7 @@ export default function PortalOTDetalle() {
 
   if (loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-[#F4B63D]" />
+      <Loader2 className="w-8 h-8 animate-spin text-[hsl(217,74%,45%)]" />
     </div>
   );
 
@@ -100,7 +100,7 @@ export default function PortalOTDetalle() {
             {ot.diagnosticoMecanico && (
               <Card className="bg-card border-border">
                 <CardContent className="p-5">
-                  <h3 className="text-[10px] font-black tracking-widest text-[#F4B63D] mb-2">DIAGNÓSTICO TÉCNICO</h3>
+                  <h3 className="text-[10px] font-black tracking-widest text-[hsl(217,74%,45%)] mb-2">DIAGNÓSTICO TÉCNICO</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{ot.diagnosticoMecanico}</p>
                 </CardContent>
               </Card>
@@ -110,7 +110,7 @@ export default function PortalOTDetalle() {
             {items.length > 0 && (
               <Card className="bg-card border-border">
                 <CardContent className="p-5">
-                  <h3 className="text-[10px] font-black tracking-widest text-[#F4B63D] mb-4">VALORIZACIÓN</h3>
+                  <h3 className="text-[10px] font-black tracking-widest text-[hsl(217,74%,45%)] mb-4">VALORIZACIÓN</h3>
                   <div className="border border-border rounded-lg overflow-hidden">
                     <div className="grid grid-cols-[1fr_60px_100px_100px] bg-muted px-3 py-2 border-b border-border">
                       {['DESCRIPCIÓN', 'CTDAD', '$ VENTA', '$ TOTAL'].map((h, i) => (
@@ -124,7 +124,7 @@ export default function PortalOTDetalle() {
                       return (
                         <div key={grupo.key}>
                           <div className="px-3 py-2 bg-muted/50 border-b border-t border-border">
-                            <span className="text-[11px] font-black tracking-widest text-[#F4B63D]">{grupo.label}</span>
+                            <span className="text-[11px] font-black tracking-widest text-[hsl(217,74%,45%)]">{grupo.label}</span>
                           </div>
                           {lineas.map((item: any, idx: number) => {
                             const totalItem = Math.round((item.precioVenta || 0) * (item.cantidad || 1));
@@ -143,7 +143,7 @@ export default function PortalOTDetalle() {
                           <div className="grid grid-cols-[1fr_60px_100px_100px] px-3 py-2 bg-muted/50 border-b-2 border-border">
                             <span className="text-[10px] font-bold tracking-wider text-muted-foreground">SUBTOTAL {grupo.label}</span>
                             <span /><span />
-                            <span className="text-right font-bold text-sm text-[#F4B63D]">{formatCLP(subtotal)}</span>
+                            <span className="text-right font-bold text-sm text-[hsl(217,74%,45%)]">{formatCLP(subtotal)}</span>
                           </div>
                         </div>
                       );
@@ -151,7 +151,7 @@ export default function PortalOTDetalle() {
                   </div>
 
                   {/* Totales */}
-                  <div className="mt-4 bg-[#F4B63D] rounded-lg p-4">
+                  <div className="mt-4 bg-[hsl(217,74%,45%)] rounded-lg p-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-black text-[#121212]">TOTAL NETO</span>
                       <span className="text-2xl font-black text-[#121212]">{formatCLP(totalGeneral)}</span>
@@ -173,12 +173,12 @@ export default function PortalOTDetalle() {
             {eventos.length > 0 && (
               <Card className="bg-card border-border">
                 <CardContent className="p-5">
-                  <h3 className="text-[10px] font-black tracking-widest text-[#F4B63D] mb-4">HISTORIAL</h3>
+                  <h3 className="text-[10px] font-black tracking-widest text-[hsl(217,74%,45%)] mb-4">HISTORIAL</h3>
                   <div className="space-y-4 relative before:content-[''] before:absolute before:left-[7px] before:top-0 before:w-[1px] before:h-full before:bg-border">
                     {eventos.map((ev: any) => (
                       <div key={ev.id} className="relative pl-8">
                         <div className="absolute left-0 w-4 h-4 rounded-full bg-card border border-muted-foreground/30 flex items-center justify-center z-10 mt-1">
-                          <div className={`w-1.5 h-1.5 rounded-full ${ev.tipoEvento === 'estado' ? 'bg-[#F4B63D]' : 'bg-muted-foreground/50'}`} />
+                          <div className={`w-1.5 h-1.5 rounded-full ${ev.tipoEvento === 'estado' ? 'bg-[hsl(217,74%,45%)]' : 'bg-muted-foreground/50'}`} />
                         </div>
                         <div className="flex justify-between items-start mb-1">
                           <h4 className="text-xs font-black tracking-widest uppercase">{ev.titulo}</h4>
@@ -197,7 +197,7 @@ export default function PortalOTDetalle() {
           <div className="lg:col-span-4 space-y-4">
             <Card className="bg-card border-border">
               <CardContent className="p-5">
-                <h3 className="text-[10px] font-black text-[#F4B63D] tracking-[2px] mb-4">DATOS DE LA OT</h3>
+                <h3 className="text-[10px] font-black text-[hsl(217,74%,45%)] tracking-[2px] mb-4">DATOS DE LA OT</h3>
                 <div className="space-y-3">
                   <div>
                     <label className="block text-[10px] text-muted-foreground font-bold mb-0.5">ESTADO ACTUAL</label>
@@ -221,7 +221,7 @@ export default function PortalOTDetalle() {
                   {ot.mecanico && (
                     <div>
                       <label className="block text-[10px] text-muted-foreground font-bold mb-0.5">MECÁNICO</label>
-                      <span className="text-sm font-bold text-[#F4B63D] uppercase">{ot.mecanico.nombre}</span>
+                      <span className="text-sm font-bold text-[hsl(217,74%,45%)] uppercase">{ot.mecanico.nombre}</span>
                     </div>
                   )}
                   {ot.motivoIngreso && (
@@ -242,7 +242,7 @@ export default function PortalOTDetalle() {
 
             {/* Total card */}
             {items.length > 0 && (
-              <div className="bg-[#F4B63D] rounded-lg p-5">
+              <div className="bg-[hsl(217,74%,45%)] rounded-lg p-5">
                 <div className="text-[10px] font-black opacity-60 tracking-widest mb-1 text-[#121212]">TOTAL NETO</div>
                 <div className="text-3xl font-black text-[#121212]">{formatCLP(totalGeneral)}</div>
                 <div className="border-t border-[#121212]/20 mt-3 pt-3 space-y-1">
