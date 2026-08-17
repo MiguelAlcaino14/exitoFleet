@@ -277,6 +277,10 @@ export default function AdminClient() {
     </div>
   );
 
+  const renderEditForm = (isNew: boolean) => (
+    <TallerEditForm isNew={isNew} form={form} setForm={setForm} saving={saving} guardar={guardar} setEditId={setEditId} />
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
@@ -339,7 +343,7 @@ export default function AdminClient() {
                 <Card key={t.id} className={`border transition hover:border-[hsl(217,74%,45%)]/40 cursor-pointer ${!t.activo ? 'opacity-50' : ''}`}>
                   <CardContent className="p-5">
                     {editId === t.id ? (
-                      <TallerEditForm isNew={false} form={form} setForm={setForm} saving={saving} guardar={guardar} setEditId={setEditId} />
+                      renderEditForm(false)
                     ) : (
                       <div className="flex flex-col sm:flex-row gap-4" onClick={() => verDetalle(t.id)}>
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ backgroundColor: `${t.colorPrimario}20` }}>
@@ -397,7 +401,7 @@ export default function AdminClient() {
               <CardTitle className="text-base flex items-center gap-2"><Plus className="w-4 h-4 text-[hsl(217,74%,45%)]" /> Crear Nuevo Taller</CardTitle>
             </CardHeader>
             <CardContent>
-              <TallerEditForm isNew={true} form={form} setForm={setForm} saving={saving} guardar={guardar} setEditId={setEditId} />
+              {renderEditForm(true)}
             </CardContent>
           </Card>
         )}
