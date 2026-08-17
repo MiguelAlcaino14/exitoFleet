@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { sendEmail } from '@/lib/email';
 
 function getSecret(): Uint8Array {
   if (!process.env.NEXTAUTH_SECRET) throw new Error('NEXTAUTH_SECRET no está configurado');
@@ -205,20 +206,11 @@ export async function DELETE(req: NextRequest) {
         </div>
       </div>`;
       for (const email of destinatarios) {
-        await fetch('https://apps.abacus.ai/api/sendNotificationEmail', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            deployment_token: process.env.ABACUSAI_API_KEY,
-            app_id: process.env.WEB_APP_ID,
-            notification_id: process.env.NOTIF_ID_CLIENTE_DESACTIV_SU_CUENTA,
-            subject: `Cliente ${cliente.razonSocial} desactivó su cuenta`,
-            body: htmlBody,
-            is_html: true,
-            recipient_email: email,
-            sender_email: `noreply@${appUrl ? new URL(appUrl).hostname : 'dmotor.cl'}`,
-            sender_alias: 'D Motor',
-          }),
+        sendEmail({
+          to: email,
+          subject: `Cliente ${cliente.razonSocial} desactivó su cuenta`,
+          html: htmlBody,
+          fromName: 'D Motor',
         }).catch((e) => console.error('Alerta email error:', e));
       }
     } catch (e) {
