@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { formatTelefonoInput } from '@/lib/validaciones';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Building2, Mail, Phone, MapPin, Pencil, Save, X, Truck, ChevronDown, ChevronRight, Hash, Calendar, DollarSign, Plus, Trash2, User, Briefcase, Loader2 } from 'lucide-react';
@@ -292,7 +293,7 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">TELÉFONO</label>
-                      <Input placeholder="+56 9 xxxx xxxx" value={nuevoContacto.telefono} onChange={(e) => setNuevoContacto({ ...nuevoContacto, telefono: e.target.value })} />
+                      <Input placeholder="+56 9 xxxx xxxx" value={nuevoContacto.telefono} onChange={(e) => setNuevoContacto({ ...nuevoContacto, telefono: formatTelefonoInput(e.target.value) })} />
                     </div>
                   </div>
                   <div className="flex gap-2">

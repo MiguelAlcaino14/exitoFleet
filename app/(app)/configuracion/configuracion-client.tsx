@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { validarEmail, validarTelefono, validarRut, formatRutInput } from '@/lib/validaciones';
+import { validarEmail, validarTelefono, validarRut, formatRutInput, formatTelefonoInput } from '@/lib/validaciones';
 import { Building2, Mail, Plus, Trash2, Star, Loader2, Users, Shield, Eye, EyeOff, Save, UserPlus, ToggleLeft, ToggleRight, Wrench, Pencil, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -237,7 +237,7 @@ export function ConfiguracionClient() {
                   </div>
                   <div>
                     <Label className="text-xs font-bold">RUT Empresa</Label>
-                    <Input value={empresa.rut ?? ''} onChange={e => setEmpresa({ ...empresa, rut: e.target.value })} placeholder="Ej: 76.115.891-0" className="mt-1" />
+                    <Input value={empresa.rut ?? ''} onChange={e => setEmpresa({ ...empresa, rut: formatRutInput(e.target.value) })} placeholder="Ej: 76.115.891-0" className="mt-1" />
                   </div>
                 </div>
                 <div>
@@ -247,11 +247,11 @@ export function ConfiguracionClient() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-xs font-bold">Teléfono Fijo</Label>
-                    <Input value={empresa.telefono ?? ''} onChange={e => setEmpresa({ ...empresa, telefono: e.target.value })} placeholder="Ej: +569 52199926" className="mt-1" />
+                    <Input value={empresa.telefono ?? ''} onChange={e => setEmpresa({ ...empresa, telefono: formatTelefonoInput(e.target.value) })} placeholder="Ej: +569 52199926" className="mt-1" />
                   </div>
                   <div>
                     <Label className="text-xs font-bold">Celular</Label>
-                    <Input value={empresa.celular ?? ''} onChange={e => setEmpresa({ ...empresa, celular: e.target.value })} placeholder="Ej: +569 12345678" className="mt-1" />
+                    <Input value={empresa.celular ?? ''} onChange={e => setEmpresa({ ...empresa, celular: formatTelefonoInput(e.target.value) })} placeholder="Ej: +569 12345678" className="mt-1" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

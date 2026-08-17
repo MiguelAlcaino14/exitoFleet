@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, ChangeEvent, useEffect, useState, useMemo, useRef } from 'react';
-import { validarRut, validarTelefono, validarEmail } from '@/lib/validaciones';
+import { validarRut, validarTelefono, validarEmail, formatRutInput, formatTelefonoInput } from '@/lib/validaciones';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -243,7 +243,11 @@ export default function AdminClient() {
         {CAMPOS_TALLER.map(f => (
           <div key={f.k}>
             <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">{f.l}</label>
-            <Input value={form[f.k] ?? ''} onChange={(e: any) => setForm({ ...form, [f.k]: e.target.value })} placeholder={f.k === 'slug' ? 'Se genera del nombre si vacío' : ''} />
+            <Input value={form[f.k] ?? ''} onChange={(e: any) => {
+              const v = e.target.value;
+              const val = f.k === 'rut' ? formatRutInput(v) : (f.k === 'telefono' || f.k === 'celular') ? formatTelefonoInput(v) : v;
+              setForm({ ...form, [f.k]: val });
+            }} placeholder={f.k === 'slug' ? 'Se genera del nombre si vacío' : f.k === 'rut' ? 'Ej: 76.314.706-1' : ''} />
           </div>
         ))}
         <div>

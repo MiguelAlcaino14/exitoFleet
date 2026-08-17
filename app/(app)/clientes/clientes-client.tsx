@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { formatRutInput, formatTelefonoInput } from '@/lib/validaciones';
 import Link from 'next/link';
 import { Users, Building2, Mail, Phone, Truck, Search, ChevronLeft, ChevronRight, Trash2, AlertTriangle, Plus, X, Save, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -252,7 +253,7 @@ export function ClientesClient() {
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">RUT</label>
-                <Input value={nuevoForm.rutEmpresa} onChange={(e: any) => setNuevoForm({ ...nuevoForm, rutEmpresa: e.target.value })} placeholder="76.314.706-1" />
+                <Input value={nuevoForm.rutEmpresa} onChange={(e: any) => setNuevoForm({ ...nuevoForm, rutEmpresa: formatRutInput(e.target.value) })} placeholder="76.314.706-1" />
               </div>
               <div className="sm:col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">Giro</label>
@@ -268,7 +269,7 @@ export function ClientesClient() {
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Teléfono</label>
-                <Input value={nuevoForm.telefono} onChange={(e: any) => setNuevoForm({ ...nuevoForm, telefono: e.target.value })} />
+                <Input value={nuevoForm.telefono} onChange={(e: any) => setNuevoForm({ ...nuevoForm, telefono: formatTelefonoInput(e.target.value) })} />
               </div>
               <div className="sm:col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">Dirección</label>

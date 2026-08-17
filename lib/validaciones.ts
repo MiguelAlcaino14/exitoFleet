@@ -37,6 +37,14 @@ export function validarTelefono(telefono: string): boolean {
   return /^\d{8,15}$/.test(clean);
 }
 
+export function formatTelefonoInput(val: string): string {
+  return val.replace(/[^\d\s+\-().]/g, '');
+}
+
+export function formatRutEmpresaInput(raw: string): string {
+  return formatRutInput(raw);
+}
+
 export function validarEmail(email: string): boolean {
   if (!email?.trim()) return true;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());

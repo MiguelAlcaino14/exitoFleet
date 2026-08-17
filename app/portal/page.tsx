@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatTelefonoInput } from '@/lib/validaciones';
 import { useRouter } from 'next/navigation';
 import { Truck, FileText, Loader2, LogOut, Calendar, Wrench, ChevronRight, UserCog, Save, ShieldAlert, AlertTriangle, Lock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -286,7 +287,7 @@ export default function PortalDashboard() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">TELÉFONO</label>
-                    <Input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} />
+                    <Input value={form.telefono} onChange={e => setForm({ ...form, telefono: formatTelefonoInput(e.target.value) })} />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">DIRECCIÓN</label>
