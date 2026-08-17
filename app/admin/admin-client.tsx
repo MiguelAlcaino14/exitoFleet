@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { Fragment, ChangeEvent, useEffect, useState, useMemo, useRef } from 'react';
 import { validarRut, validarTelefono, validarEmail } from '@/lib/validaciones';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -23,7 +23,7 @@ function LogoUploader({ currentUrl, onUploaded }: { currentUrl: string; onUpload
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { toast.error('Solo se permiten imágenes'); return; }
@@ -518,7 +518,7 @@ export default function AdminClient() {
                           </thead>
                           <tbody>
                             {detalle.usuarios.map((u: any) => (
-                              <React.Fragment key={u.id}>
+                              <Fragment key={u.id}>
                                 <tr className="border-b border-border/50 hover:bg-muted/20">
                                   <td className="py-2.5 px-3 font-medium">{u.nombre}</td>
                                   <td className="py-2.5 px-3 text-muted-foreground"><span suppressHydrationWarning>{u.email}</span></td>
@@ -574,7 +574,7 @@ export default function AdminClient() {
                                     </td>
                                   </tr>
                                 )}
-                              </React.Fragment>
+                              </Fragment>
                             ))}
                           </tbody>
                         </table>
