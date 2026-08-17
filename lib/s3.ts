@@ -16,7 +16,15 @@ export async function generatePresignedUploadUrl(fileName: string, contentType: 
   const cloud_storage_path = `${prefix}/${Date.now()}-${safeName}`;
   const command = new PutObjectCommand({ Bucket: bucketName, Key: cloud_storage_path, ContentType: contentType });
   const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
-  return { uploadUrl, cloud_storage_path };
+  const encodedPath = cloud_storage_path.split('/').map(encodeURIComponent).join('/');
+  const region = process.env.AWS_REGION ?? 'us-east-1';
+  const endpoint = process.env.AWS_ENDPOINT;
+  const publicUrl = isPublic
+    ? (endpoint
+        ? `https://${bucketName}.${region}.digitaloceanspaces.com/${encodedPath}`
+        : `https://${bucketName}.s3.${region}.amazonaws.com/${encodedPath}`)
+    : undefined;
+  return { uploadUrl, cloud_storage_path, ...(publicUrl ? { publicUrl } : {}) };
 }
 
 export async function getFileUrl(cloud_storage_path: string, contentType: string, isPublic: boolean) {
