@@ -282,7 +282,7 @@ export default function AdminClient() {
               <ShieldCheck className="w-5 h-5 text-[hsl(217,74%,45%)]" />
             </div>
             <div>
-              <h1 className=”font-extrabold text-lg tracking-tight”>D Motor — Super Admin</h1>
+              <h1 className="font-extrabold text-lg tracking-tight">D Motor — Super Admin</h1>
               <p className="text-xs text-muted-foreground">Gestión de talleres y usuarios</p>
             </div>
           </div>
@@ -350,7 +350,7 @@ export default function AdminClient() {
                             <Badge className="text-[9px] bg-primary/20 text-primary">{t.slug}</Badge>
                             {!t.activo && <Badge className="text-[9px] bg-red-500/20 text-red-400">Inactivo</Badge>}
                           </div>
-                          {t.razonSocial && <p className=”text-xs text-muted-foreground mt-0.5”>{t.razonSocial}{t.rut ? ` — ${t.rut}` : ''}</p>}
+                          {t.razonSocial && <p className="text-xs text-muted-foreground mt-0.5">{t.razonSocial}{t.rut ? ` — ${t.rut}` : ''}</p>}
                           <div className="flex gap-4 mt-2">
                             <span className="text-xs text-muted-foreground"><Users className="w-3 h-3 inline mr-1" />{t._count?.usuarios ?? 0} usuarios</span>
                             <span className="text-xs text-muted-foreground"><Truck className="w-3 h-3 inline mr-1" />{t._count?.vehiculos ?? 0} Vehículos</span>
@@ -428,7 +428,7 @@ export default function AdminClient() {
                           <Badge className="text-[10px] bg-primary/20 text-primary">{detalle.slug}</Badge>
                           {!detalle.activo && <Badge className="text-[10px] bg-red-500/20 text-red-400">Inactivo</Badge>}
                         </div>
-                        {detalle.razonSocial && <p className=”text-sm text-muted-foreground mt-1”>{detalle.razonSocial}{detalle.rut ? ` — ${detalle.rut}` : ''}</p>}
+                        {detalle.razonSocial && <p className="text-sm text-muted-foreground mt-1">{detalle.razonSocial}{detalle.rut ? ` — ${detalle.rut}` : ''}</p>}
                         {detalle.division && <p className="text-xs text-muted-foreground mt-0.5">División: {detalle.division}</p>}
 
                         <div className="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs text-muted-foreground">
