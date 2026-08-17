@@ -37,7 +37,7 @@ function LogoUploader({ currentUrl, onUploaded }: { currentUrl: string; onUpload
       });
       const { uploadUrl, cloud_storage_path, publicUrl } = await res.json();
       if (!uploadUrl) { toast.error('Error al obtener URL de subida'); return; }
-      const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type, 'x-amz-acl': 'public-read' }, body: file });
       if (!putRes.ok) { toast.error('Error al subir imagen al storage'); return; }
       onUploaded(publicUrl ?? uploadUrl.split('?')[0]);
       toast.success('Logo subido');

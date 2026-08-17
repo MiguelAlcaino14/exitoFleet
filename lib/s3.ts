@@ -14,7 +14,7 @@ export async function generatePresignedUploadUrl(fileName: string, contentType: 
   const prefix = isPublic ? `${folderPrefix}public/uploads` : `${folderPrefix}uploads`;
   const safeName = fileName.replace(/^.*[\\/]/, '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200);
   const cloud_storage_path = `${prefix}/${Date.now()}-${safeName}`;
-  const command = new PutObjectCommand({ Bucket: bucketName, Key: cloud_storage_path, ContentType: contentType });
+  const command = new PutObjectCommand({ Bucket: bucketName, Key: cloud_storage_path, ContentType: contentType, ...(isPublic ? { ACL: 'public-read' } : {}) });
   const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
   const encodedPath = cloud_storage_path.split('/').map(encodeURIComponent).join('/');
   const region = process.env.AWS_REGION ?? 'us-east-1';
