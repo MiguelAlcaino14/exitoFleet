@@ -1,3 +1,21 @@
+import nodemailer from 'nodemailer';
+
+function createTransport() {
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT ?? '587', 10);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) throw new Error('Credenciales SMTP no configuradas (SMTP_HOST, SMTP_USER, SMTP_PASS)');
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+}
+
 export async function sendEmail({
   to,
   subject,
@@ -13,40 +31,14 @@ export async function sendEmail({
   fromName?: string;
   replyTo?: string;
 }) {
-  const apiKey = process.env.MAILERSEND_API_KEY;
-  if (!apiKey) throw new Error('MAILERSEND_API_KEY no configurada');
+  const transport = createTransport();
+  const from = `"${fromName ?? 'D Motor'}" <${fromEmail ?? process.env.SMTP_USER}>`;
 
-  const from = {
-    email: fromEmail || process.env.MAILERSEND_FROM_EMAIL || '',
-    name: fromName || 'D Motor',
-  };
-
-  if (!from.email) throw new Error('Email remitente no configurado');
-
-  const recipients = (Array.isArray(to) ? to : [to]).map((email) => ({ email }));
-
-  const body: any = {
+  await transport.sendMail({
     from,
-    to: recipients,
+    to: Array.isArray(to) ? to.join(', ') : to,
     subject,
     html,
-  };
-
-  if (replyTo) body.reply_to = { email: replyTo };
-
-  const res = await fetch('https://api.mailersend.com/v1/email', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
+    ...(replyTo ? { replyTo } : {}),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`MailerSend error ${res.status}: ${err}`);
-  }
-
-  return true;
 }
