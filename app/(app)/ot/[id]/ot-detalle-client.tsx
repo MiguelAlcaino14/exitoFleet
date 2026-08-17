@@ -108,7 +108,10 @@ export function OTDetalleClient({ otId }: { otId: string }) {
   const fetchOT = useCallback(() => {
     if (!otId) return;
     fetch(`/api/ordenes/${otId}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('not_found');
+        return r.json();
+      })
       .then((d) => {
         setOt(d);
         setDiagnostico(d?.diagnosticoMecanico ?? '');
@@ -330,14 +333,14 @@ export function OTDetalleClient({ otId }: { otId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileName: file.name, contentType: file.type, isPublic: true }),
       });
-      const { url, cloudStoragePath, headers: uploadHeaders } = await presignedRes.json();
+      const { uploadUrl, cloud_storage_path, headers: uploadHeaders } = await presignedRes.json();
       const hdrs: Record<string, string> = { 'Content-Type': file.type };
       if (uploadHeaders) Object.assign(hdrs, uploadHeaders);
-      await fetch(url, { method: 'PUT', headers: hdrs, body: file });
+      await fetch(uploadUrl, { method: 'PUT', headers: hdrs, body: file });
       await fetch(`/api/ordenes/${otId}/fotos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cloudStoragePath, contentType: file.type, fileName: file.name, isPublic: true }),
+        body: JSON.stringify({ cloud_storage_path, contentType: file.type, fileName: file.name, isPublic: true }),
       });
       fetchOT();
       toast.success('Foto subida');
@@ -367,7 +370,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
         {/* Encabezado empresa */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
           <div>
-            <h1 style={{ fontSize: '18pt', fontWeight: 'bold', margin: 0 }}>{configTaller?.razonSocial || 'Éxito Fleet Management'}</h1>
+            <h1 style={{ fontSize: '18pt', fontWeight: 'bold', margin: 0 }}>{configTaller?.razonSocial || 'D Motor'}</h1>
             {configTaller?.direccion && <p style={{ margin: '2px 0', fontSize: '9pt', color: '#555' }}>{configTaller.direccion}</p>}
             {configTaller?.rut && <p style={{ margin: '1px 0', fontSize: '9pt', color: '#555' }}>RUT: {configTaller.rut}{configTaller.telefono ? ` / Fono: ${configTaller.telefono}` : ''}</p>}
             {configTaller?.division && <p style={{ margin: '1px 0', fontSize: '9pt', color: '#555' }}>{configTaller.division}</p>}
@@ -500,7 +503,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
           </tbody>
         </table>
 
-        <p style={{ fontSize: '8pt', color: '#888', marginTop: '20px', textAlign: 'center' }}>Documento generado por Éxito Fleet Management · Cotización sujeta a disponibilidad de repuestos</p>
+        <p style={{ fontSize: '8pt', color: '#888', marginTop: '20px', textAlign: 'center' }}>Documento generado por D Motor · Cotización sujeta a disponibilidad de repuestos</p>
       </div>
 
       {/* ═══ CONTENIDO EN PANTALLA ═══ */}

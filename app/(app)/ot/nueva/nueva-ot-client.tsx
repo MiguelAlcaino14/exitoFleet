@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { validarRut, validarTelefono, validarEmail, formatRutInput, validarPatente, formatPatenteInput } from '@/lib/validaciones';
 import { useRouter } from 'next/navigation';
 import { Search, Truck, User, Fuel, Camera, CheckCircle, Plus, ArrowLeft, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,6 +67,7 @@ export function NuevaOTClient() {
 
   const buscarPatente = async () => {
     if (!patente.trim()) { toast.error('Ingresa una patente'); return; }
+    if (!validarPatente(patente)) { toast.error('Patente inválida — formato: ABCD-12 o AB-1234'); return; }
     setBuscando(true);
     try {
       const res = await fetch(`/api/vehiculos/buscar?patente=${encodeURIComponent(patente.trim())}`);
@@ -86,6 +88,17 @@ export function NuevaOTClient() {
 
   const crearOT = async () => {
     if (!motivo.trim()) { toast.error('El motivo de ingreso es requerido'); return; }
+    if (conductorTelefono.trim() && !validarTelefono(conductorTelefono)) { toast.error('Teléfono del conductor inválido — solo dígitos'); return; }
+    if (esNuevo) {
+      if (!ncRazonSocial.trim()) { toast.error('La razón social del cliente es requerida'); return; }
+      if (ncRut.trim() && !validarRut(ncRut)) { toast.error('RUT del cliente inválido — formato: 12.345.678-9'); return; }
+      if (ncEmail.trim() && !validarEmail(ncEmail)) { toast.error('Email del cliente inválido'); return; }
+      if (ncTelefono.trim() && !validarTelefono(ncTelefono)) { toast.error('Teléfono del cliente inválido — solo dígitos'); return; }
+      if (nvAnio.trim()) {
+        const anio = parseInt(nvAnio);
+        if (isNaN(anio) || anio < 1900 || anio > new Date().getFullYear() + 1) { toast.error('Año del vehículo inválido'); return; }
+      }
+    }
     setSubmitting(true);
     try {
       const body: any = {
@@ -187,7 +200,7 @@ export function NuevaOTClient() {
                   <Input
                     placeholder="Ej: ABCD-12"
                     value={patente}
-                    onChange={(e: any) => setPatente(e.target.value.toUpperCase())}
+                    onChange={(e: any) => setPatente(formatPatenteInput(e.target.value))}
                     className="text-lg font-mono tracking-wider"
                     onKeyDown={(e: any) => e.key === 'Enter' && buscarPatente()}
                   />
@@ -237,7 +250,7 @@ export function NuevaOTClient() {
                     <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><User className="w-4 h-4" /> Datos del Cliente</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div><Label>Razón Social *</Label><Input className="mt-1" value={ncRazonSocial} onChange={(e: any) => setNcRazonSocial(e.target.value)} placeholder="Empresa S.A." /></div>
-                      <div><Label>RUT Empresa</Label><Input className="mt-1" value={ncRut} onChange={(e: any) => setNcRut(e.target.value)} placeholder="76.123.456-7" /></div>
+                      <div><Label>RUT Empresa</Label><Input className="mt-1" value={ncRut} onChange={(e: any) => setNcRut(formatRutInput(e.target.value))} placeholder="76.123.456-7" /></div>
                       <div><Label>Email</Label><Input className="mt-1" value={ncEmail} onChange={(e: any) => setNcEmail(e.target.value)} placeholder="contacto@empresa.cl" type="email" /></div>
                       <div><Label>Teléfono</Label><Input className="mt-1" value={ncTelefono} onChange={(e: any) => setNcTelefono(e.target.value)} placeholder="+569..." /></div>
                     </div>

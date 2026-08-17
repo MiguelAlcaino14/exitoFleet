@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { validarEmail, validarTelefono, validarRut, formatRutInput } from '@/lib/validaciones';
 import { Building2, Mail, Plus, Trash2, Star, Loader2, Users, Shield, Eye, EyeOff, Save, UserPlus, ToggleLeft, ToggleRight, Wrench, Pencil, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -106,6 +107,9 @@ export function ConfiguracionClient() {
   };
 
   const guardarEmpresa = async () => {
+    if (empresa.rut?.trim() && !validarRut(empresa.rut)) { toast.error('RUT del taller inválido — formato: 12.345.678-9'); return; }
+    if (empresa.telefono?.trim() && !validarTelefono(empresa.telefono)) { toast.error('Teléfono inválido — solo dígitos, 8-15 caracteres'); return; }
+    if (empresa.celular?.trim() && !validarTelefono(empresa.celular)) { toast.error('Celular inválido — solo dígitos, 8-15 caracteres'); return; }
     setEmpresaSaving(true);
     try {
       const res = await fetch('/api/configuracion-taller', {
@@ -121,15 +125,18 @@ export function ConfiguracionClient() {
   const agregarCuenta = async () => {
     if (!nombre.trim() || !email.trim()) { toast.error('Nombre y email requeridos'); return; }
     setCuentaSaving(true);
-    await fetch('/api/cuentas-correo', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, email, predeterminada: cuentas.length === 0 }),
-    });
-    setNombre(''); setEmail('');
-    const r = await fetch('/api/cuentas-correo').then(r => r.json());
-    setCuentas(r ?? []);
+    try {
+      const res = await fetch('/api/cuentas-correo', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, email, predeterminada: cuentas.length === 0 }),
+      });
+      if (!res.ok) { const err = await res.json(); toast.error(err.error || 'Error al agregar cuenta'); return; }
+      setNombre(''); setEmail('');
+      const r = await fetch('/api/cuentas-correo').then(r => r.json());
+      setCuentas(Array.isArray(r) ? r : []);
+      toast.success('Cuenta agregada');
+    } catch { toast.error('Error de conexión'); }
     setCuentaSaving(false);
-    toast.success('Cuenta agregada');
   };
 
   const eliminarCuenta = async (id: string) => {
@@ -143,6 +150,8 @@ export function ConfiguracionClient() {
     if (!nuevoNombre.trim() || !nuevoEmail.trim() || !nuevoPassword.trim()) {
       toast.error('Nombre, email y contraseña son requeridos'); return;
     }
+    if (!validarEmail(nuevoEmail)) { toast.error('Email inválido'); return; }
+    if (nuevoPassword.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
     setUsuarioSaving(true);
     try {
       const res = await fetch('/api/usuarios', {

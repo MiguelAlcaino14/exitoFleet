@@ -64,7 +64,7 @@ export function DashboardClient() {
             Dashboard Operativo
           </h1>
           <p className="text-muted-foreground text-sm mt-2">
-            Bienvenido, {session?.user?.name ?? 'Administrador'} · Resumen de flota en taller
+            Bienvenido, {session?.user?.name ?? 'Administrador'} · Resumen de órdenes de trabajo
           </p>
         </div>
         <div className="text-right mt-4 lg:mt-0">

@@ -62,6 +62,36 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function DELETE(req: NextRequest) {
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  if (scope.role !== 'ADMIN' && scope.role !== 'SUPER_ADMIN') {
+    return NextResponse.json({ error: 'Solo administradores' }, { status: 403 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 });
+
+    const target = await prisma.user.findFirst({ where: { id, ...tallerWhere(scope) } });
+    if (!target) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    if (target.rol === 'SUPER_ADMIN') return NextResponse.json({ error: 'No se puede eliminar un Super Admin' }, { status: 403 });
+
+    const otCount = await prisma.ordenTrabajo.count({ where: { usuarioCreadorId: id } });
+    if (otCount > 0) {
+      await prisma.user.update({ where: { id }, data: { activo: false } });
+      return NextResponse.json({ ok: true, desactivado: true, mensaje: 'Usuario tiene OTs asociadas — fue desactivado en lugar de eliminado' });
+    }
+
+    await prisma.user.delete({ where: { id } });
+    return NextResponse.json({ ok: true, eliminado: true });
+  } catch (err: any) {
+    console.error('Usuarios DELETE error:', err);
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+  }
+}
+
 export async function PATCH(req: NextRequest) {
   const scope = await getTallerScope();
   if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });

@@ -49,14 +49,18 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  const scope = await getTallerScope();
+  if (!scope) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   try {
     const body = await req.json();
     if (!body?.numero || !body?.otId) {
       return NextResponse.json({ error: 'Número y OT son requeridos' }, { status: 400 });
     }
+
+    // Verificar que la OT pertenece al taller del usuario antes de facturar
+    const ot = await prisma.ordenTrabajo.findFirst({ where: { id: body.otId, ...tallerWhere(scope) } });
+    if (!ot) return NextResponse.json({ error: 'OT no encontrada' }, { status: 404 });
 
     const montoNeto = parseFloat(body.montoNeto) || 0;
     const iva = parseFloat(body.iva) || Math.round(montoNeto * 0.19);
@@ -71,7 +75,7 @@ export async function POST(req: NextRequest) {
         montoTotal,
         fechaEmision: body.fechaEmision ? new Date(body.fechaEmision) : new Date(),
         observaciones: body.observaciones ?? null,
-        tallerId: (await getTallerScope())?.tallerId ?? undefined,
+        tallerId: scope.tallerId ?? undefined,
       },
       include: {
         ordenTrabajo: {
@@ -83,9 +87,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Also advance OT to CERRADA if POR_FACTURAR
-    const ot = await prisma.ordenTrabajo.findUnique({ where: { id: body.otId } });
-    if (ot?.estado === 'POR_FACTURAR') {
+    if (ot.estado === 'POR_FACTURAR') {
       await prisma.ordenTrabajo.update({
         where: { id: body.otId },
         data: { estado: 'CERRADA', fechaFacturacion: new Date() },

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { prisma } from '@/lib/db';
+import bcrypt from 'bcryptjs';
 
 function getSecret(): Uint8Array {
   if (!process.env.NEXTAUTH_SECRET) throw new Error('NEXTAUTH_SECRET no está configurado');
@@ -19,9 +20,10 @@ export async function GET(req: NextRequest) {
 
     const cliente = await prisma.cliente.findUnique({
       where: { id: clienteId },
-      select: { id: true, razonSocial: true, rutEmpresa: true, giro: true, email: true, telefono: true, direccion: true, nombreContacto: true, activo: true },
+      select: { id: true, razonSocial: true, rutEmpresa: true, giro: true, email: true, telefono: true, direccion: true, nombreContacto: true, activo: true, taller: { select: { razonSocial: true } } },
     });
     if (!cliente) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
+    if (!cliente.activo) return NextResponse.json({ error: 'Cuenta desactivada' }, { status: 401 });
 
     const vehiculos = await prisma.vehiculo.findMany({
       where: { clienteId },
@@ -129,6 +131,40 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
+// PUT: el cliente cambia su contraseña
+export async function PUT(req: NextRequest) {
+  const clienteId = await getClienteId(req);
+  if (!clienteId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+  try {
+    const body = await req.json();
+    const { currentPassword, newPassword } = body ?? {};
+    if (!currentPassword || !newPassword) {
+      return NextResponse.json({ error: 'Contraseña actual y nueva son requeridas' }, { status: 400 });
+    }
+    if (newPassword.length < 6) {
+      return NextResponse.json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' }, { status: 400 });
+    }
+
+    const cliente = await prisma.cliente.findUnique({ where: { id: clienteId }, select: { passwordHash: true } });
+    if (!cliente) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
+    if (!cliente.passwordHash) {
+      return NextResponse.json({ error: 'Esta cuenta no tiene contraseña configurada. Contacta al taller.' }, { status: 400 });
+    }
+
+    const match = await bcrypt.compare(currentPassword, cliente.passwordHash);
+    if (!match) return NextResponse.json({ error: 'Contraseña actual incorrecta' }, { status: 400 });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await prisma.cliente.update({ where: { id: clienteId }, data: { passwordHash: newHash } });
+
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    console.error('Portal me PUT error:', err);
+    return NextResponse.json({ error: 'Error al cambiar contraseña' }, { status: 500 });
+  }
+}
+
 // DELETE: el cliente desactiva/borra su cuenta y avisa al administrador
 export async function DELETE(req: NextRequest) {
   const clienteId = await getClienteId(req);
@@ -160,7 +196,7 @@ export async function DELETE(req: NextRequest) {
       const destinatarios = admins.map((a) => a.email).filter(Boolean);
       const htmlBody = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto">
         <div style="background:#121212;padding:24px 32px;border-radius:8px 8px 0 0">
-          <h2 style="color:#F4B63D;margin:0;font-size:18px">ÉXITO Fleet — Alerta de cuenta</h2>
+          <h2 style="color:#1e5fc8;margin:0;font-size:18px">D Motor — Alerta de cuenta</h2>
         </div>
         <div style="background:#fff;padding:28px 32px;border:1px solid #e5e5e5;border-top:none">
           <p style="color:#333;font-size:15px;line-height:1.6">El cliente <strong>${cliente.razonSocial}</strong>${cliente.rutEmpresa ? ` (RUT ${cliente.rutEmpresa})` : ''} <strong>desactivó su cuenta</strong> desde el portal del cliente.</p>
@@ -180,8 +216,8 @@ export async function DELETE(req: NextRequest) {
             body: htmlBody,
             is_html: true,
             recipient_email: email,
-            sender_email: `noreply@${appUrl ? new URL(appUrl).hostname : 'exitofleet.cl'}`,
-            sender_alias: 'ÉXITO Fleet',
+            sender_email: `noreply@${appUrl ? new URL(appUrl).hostname : 'dmotor.cl'}`,
+            sender_alias: 'D Motor',
           }),
         }).catch((e) => console.error('Alerta email error:', e));
       }

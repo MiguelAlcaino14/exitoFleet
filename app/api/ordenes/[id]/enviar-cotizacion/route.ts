@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
@@ -28,7 +28,7 @@ function buildEmailHtml(params: {
   return `
   <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:650px;margin:0 auto;background:#fff">
     <div style="background:#0a0a0a;padding:30px 40px;border-radius:8px 8px 0 0">
-      <div style="color:#F4B63D;font-size:22px;font-weight:900;letter-spacing:2px">${empresaNombre}</div>
+      <div style="color:#1e5fc8;font-size:22px;font-weight:900;letter-spacing:2px">${empresaNombre}</div>
       ${configTaller?.rut ? `<div style="color:#666;font-size:10px;letter-spacing:1px;margin-top:2px">RUT: ${configTaller.rut}${configTaller.telefono ? ` | ${configTaller.telefono}` : ''}</div>` : ''}
     </div>
     <div style="padding:30px 40px;border:1px solid #e5e5e5;border-top:none">
@@ -45,10 +45,10 @@ function buildEmailHtml(params: {
       <div style="background:#0a0a0a;border-radius:8px;padding:20px;margin:20px 0;color:#fff">
         <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px"><span>Total Neto:</span><span style="font-weight:700">${fmt(totalNeto)}</span></div>
         <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px;color:#888"><span>IVA (19%):</span><span>${fmt(iva)}</span></div>
-        <div style="border-top:1px solid #333;padding-top:10px;display:flex;justify-content:space-between;font-size:18px;font-weight:900"><span style="color:#F4B63D">TOTAL c/IVA:</span><span>${fmt(totalConIva)}</span></div>
+        <div style="border-top:1px solid #333;padding-top:10px;display:flex;justify-content:space-between;font-size:18px;font-weight:900"><span style="color:#1e5fc8">TOTAL c/IVA:</span><span>${fmt(totalConIva)}</span></div>
       </div>
       <div style="text-align:center;margin:30px 0">
-        <a href="${cotizacionUrl}" style="background:#F4B63D;color:#000;padding:14px 40px;border-radius:6px;font-weight:800;text-decoration:none;font-size:14px;display:inline-block">VER COTIZACIÓN ONLINE</a>
+        <a href="${cotizacionUrl}" style="background:#1e5fc8;color:#fff;padding:14px 40px;border-radius:6px;font-weight:800;text-decoration:none;font-size:14px;display:inline-block">VER COTIZACIÓN ONLINE</a>
       </div>
       <p style="color:#555;font-size:14px;line-height:1.6">Quedamos atentos a su aprobación.</p>
       <p style="color:#555;font-size:14px">Saludos cordiales,<br/><strong>${empresaNombre}</strong><br/><span style="color:#888;font-size:12px">${cuentaNombre}</span></p>
@@ -69,11 +69,11 @@ function buildItemsHtml(items: any[]): string {
     const lineas = items.filter(i => i.tipo === g);
     if (lineas.length === 0) continue;
     const subtotal = lineas.reduce((a, i) => a + i.precioVenta * i.cantidad, 0);
-    html += `<tr style="background:#f8f8f8"><td colspan="4" style="padding:8px 12px;font-weight:bold;font-size:13px;color:#F4B63D;border-bottom:1px solid #eee">${grupoLabels[g]}</td></tr>`;
+    html += `<tr style="background:#f8f8f8"><td colspan="4" style="padding:8px 12px;font-weight:bold;font-size:13px;color:#1e5fc8;border-bottom:1px solid #eee">${grupoLabels[g]}</td></tr>`;
     for (const item of lineas) {
       html += `<tr><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;font-size:13px">${item.descripcion}</td><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:13px">${item.cantidad}</td><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:13px">${fmt(item.precioVenta)}</td><td style="padding:6px 12px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:13px;font-weight:600">${fmt(Math.round(item.precioVenta * item.cantidad))}</td></tr>`;
     }
-    html += `<tr><td colspan="3" style="padding:6px 12px;text-align:right;font-size:12px;color:#888;border-bottom:2px solid #eee">Subtotal ${grupoLabels[g]}:</td><td style="padding:6px 12px;text-align:right;font-weight:bold;font-size:13px;color:#F4B63D;border-bottom:2px solid #eee">${fmt(subtotal)}</td></tr>`;
+    html += `<tr><td colspan="3" style="padding:6px 12px;text-align:right;font-size:12px;color:#888;border-bottom:2px solid #eee">Subtotal ${grupoLabels[g]}:</td><td style="padding:6px 12px;text-align:right;font-weight:bold;font-size:13px;color:#1e5fc8;border-bottom:2px solid #eee">${fmt(subtotal)}</td></tr>`;
   }
   return html;
 }
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!ot) return NextResponse.json({ error: 'OT no encontrada' }, { status: 404 });
 
     const configTaller = await prisma.configuracionTaller.findUnique({ where: { id: 'singleton' } });
-    const empresaNombre = configTaller?.razonSocial || 'Fleet Management';
+    const empresaNombre = configTaller?.razonSocial || 'D Motor';
 
     let cuentaNombre = empresaNombre;
     if (cuentaCorreoId) {
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
 
     const subject = `Cotización OT-${String(ot.otNumero).padStart(6, '0')} - ${[ot.vehiculo?.marca, ot.vehiculo?.modelo].filter(Boolean).join(' ')} - ${ot.vehiculo?.patente ?? ''}`;
-    const senderEmail = `noreply@${appUrl ? new URL(appUrl).hostname : 'fleetmanagement.app'}`;
+    const senderEmail = `noreply@${appUrl ? new URL(appUrl).hostname : 'dmotor.cl'}`;
 
     const results = await Promise.all(
       emails.map(async (email) => {

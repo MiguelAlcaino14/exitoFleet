@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
         email: body.email ?? '',
         division: body.division ?? '',
         logoUrl: body.logoUrl ?? '',
-        colorPrimario: body.colorPrimario ?? '#F4B63D',
+        colorPrimario: body.colorPrimario ?? '#1e5fc8',
         colorFondo: body.colorFondo ?? '#121212',
       },
       include: { _count: { select: { usuarios: true, clientes: true, ordenes: true, vehiculos: true } } },

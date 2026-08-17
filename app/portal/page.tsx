@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Truck, FileText, Loader2, LogOut, Calendar, Wrench, ChevronRight, UserCog, Save, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Truck, FileText, Loader2, LogOut, Calendar, Wrench, ChevronRight, UserCog, Save, ShieldAlert, AlertTriangle, Lock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,8 @@ export default function PortalDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'vehiculos' | 'ordenes' | 'datos'>('ordenes');
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [pwSaving, setPwSaving] = useState(false);
   const [form, setForm] = useState<any>({ razonSocial: '', giro: '', email: '', telefono: '', direccion: '', nombreContacto: '' });
   const [saving, setSaving] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
@@ -61,6 +63,20 @@ export default function PortalDashboard() {
       toast.success('Tus datos fueron actualizados');
       if (j?.cliente) setData((prev: any) => ({ ...prev, cliente: { ...prev.cliente, ...j.cliente } }));
     } catch { toast.error('Error al guardar'); } finally { setSaving(false); }
+  };
+
+  const cambiarPassword = async () => {
+    if (!pwForm.current || !pwForm.next) { toast.error('Completa todos los campos'); return; }
+    if (pwForm.next.length < 6) { toast.error('La nueva contraseña debe tener al menos 6 caracteres'); return; }
+    if (pwForm.next !== pwForm.confirm) { toast.error('Las contraseñas no coinciden'); return; }
+    setPwSaving(true);
+    try {
+      const r = await fetch('/api/portal/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.next }) });
+      const j = await r.json();
+      if (!r.ok) { toast.error(j?.error || 'Error al cambiar contraseña'); return; }
+      toast.success('Contraseña actualizada correctamente');
+      setPwForm({ current: '', next: '', confirm: '' });
+    } catch { toast.error('Error al cambiar contraseña'); } finally { setPwSaving(false); }
   };
 
   const eliminarCuenta = async () => {
@@ -98,7 +114,7 @@ export default function PortalDashboard() {
               <Truck className="w-5 h-5 text-[hsl(217,74%,45%)]" />
             </div>
             <div>
-              <h1 className="font-extrabold text-lg tracking-tight">ÉXITO Fleet</h1>
+              <h1 className="font-extrabold text-lg tracking-tight">{data?.cliente?.taller?.razonSocial ?? 'D Motor'}</h1>
               <p className="text-xs text-muted-foreground">Portal de Clientes</p>
             </div>
           </div>
@@ -283,6 +299,31 @@ export default function PortalDashboard() {
                     {saving ? 'Guardando...' : 'Guardar cambios'}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Cambiar contraseña */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2"><Lock className="w-4 h-4 text-[hsl(217,74%,45%)]" /> Cambiar Contraseña</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 max-w-sm">
+                <div>
+                  <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">CONTRASEÑA ACTUAL</label>
+                  <Input type="password" value={pwForm.current} onChange={e => setPwForm({ ...pwForm, current: e.target.value })} placeholder="••••••••" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">NUEVA CONTRASEÑA</label>
+                  <Input type="password" value={pwForm.next} onChange={e => setPwForm({ ...pwForm, next: e.target.value })} placeholder="Mínimo 6 caracteres" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">CONFIRMAR NUEVA CONTRASEÑA</label>
+                  <Input type="password" value={pwForm.confirm} onChange={e => setPwForm({ ...pwForm, confirm: e.target.value })} placeholder="Repite la nueva contraseña" />
+                </div>
+                <Button onClick={cambiarPassword} disabled={pwSaving} className="bg-[hsl(217,74%,45%)] hover:bg-[hsl(217,74%,45%)]/90 text-white">
+                  {pwSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Lock className="w-4 h-4 mr-2" />}
+                  {pwSaving ? 'Guardando...' : 'Cambiar contraseña'}
+                </Button>
               </CardContent>
             </Card>
 

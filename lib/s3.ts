@@ -12,7 +12,8 @@ export async function generatePresignedUploadUrl(fileName: string, contentType: 
   const s3 = createS3Client();
   const { bucketName, folderPrefix } = getBucketConfig();
   const prefix = isPublic ? `${folderPrefix}public/uploads` : `${folderPrefix}uploads`;
-  const cloud_storage_path = `${prefix}/${Date.now()}-${fileName}`;
+  const safeName = fileName.replace(/^.*[\\/]/, '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200);
+  const cloud_storage_path = `${prefix}/${Date.now()}-${safeName}`;
   const command = new PutObjectCommand({ Bucket: bucketName, Key: cloud_storage_path, ContentType: contentType });
   const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
   return { uploadUrl, cloud_storage_path };
@@ -48,7 +49,8 @@ export async function initiateMultipartUpload(fileName: string, contentType: str
   const s3 = createS3Client();
   const { bucketName, folderPrefix } = getBucketConfig();
   const prefix = isPublic ? `${folderPrefix}public/uploads` : `${folderPrefix}uploads`;
-  const cloud_storage_path = `${prefix}/${Date.now()}-${fileName}`;
+  const safeName = fileName.replace(/^.*[\\/]/, '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200);
+  const cloud_storage_path = `${prefix}/${Date.now()}-${safeName}`;
   const command = new CreateMultipartUploadCommand({ Bucket: bucketName, Key: cloud_storage_path, ContentType: contentType });
   const response = await s3.send(command);
   return { uploadId: response.UploadId, cloud_storage_path };

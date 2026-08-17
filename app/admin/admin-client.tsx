@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { validarRut, validarTelefono, validarEmail } from '@/lib/validaciones';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -35,16 +36,12 @@ function LogoUploader({ currentUrl, onUploaded }: { currentUrl: string; onUpload
         body: JSON.stringify({ fileName: file.name, contentType: file.type, isPublic: true }),
       });
       const { uploadUrl, cloud_storage_path } = await res.json();
-      await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
-      // Build public URL
-      const bucketMatch = uploadUrl.match(/https:\/\/([^.]+)\.s3\.([^.]+)\.amazonaws\.com/);
-      if (bucketMatch) {
-        const publicUrl = `https://cdn.pixabay.com/photo/2016/01/03/00/43/upload-1118929_640.png`;
-        onUploaded(publicUrl);
-        toast.success('Logo subido');
-      } else {
-        toast.error('Error construyendo URL');
-      }
+      if (!uploadUrl) { toast.error('Error al obtener URL de subida'); return; }
+      const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      if (!putRes.ok) { toast.error('Error al subir imagen al storage'); return; }
+      const publicUrl = uploadUrl.split('?')[0];
+      onUploaded(publicUrl);
+      toast.success('Logo subido');
     } catch { toast.error('Error al subir imagen'); } finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
   };
 
@@ -86,6 +83,17 @@ export default function AdminClient() {
   const [filtro, setFiltro] = useState('');
   const [detalle, setDetalle] = useState<any>(null);
   const [detalleLoading, setDetalleLoading] = useState(false);
+  const [showNuevoUsuario, setShowNuevoUsuario] = useState(false);
+  const [nuEmail, setNuEmail] = useState('');
+  const [nuNombre, setNuNombre] = useState('');
+  const [nuPassword, setNuPassword] = useState('');
+  const [nuRol, setNuRol] = useState('ADMIN');
+  const [nuSaving, setNuSaving] = useState(false);
+  const [editUsuarioId, setEditUsuarioId] = useState<string | null>(null);
+  const [euNombre, setEuNombre] = useState('');
+  const [euRol, setEuRol] = useState('ADMIN');
+  const [euPassword, setEuPassword] = useState('');
+  const [euSaving, setEuSaving] = useState(false);
 
   const fetchTalleres = async () => {
     try {
@@ -105,7 +113,7 @@ export default function AdminClient() {
   }, [talleres, filtro]);
 
   const nuevoTallerForm = {
-    nombre: '', slug: '', razonSocial: '', rut: '', direccion: '', telefono: '', celular: '', email: '', division: '', logoUrl: '', colorPrimario: '#F4B63D', colorFondo: '#121212',
+    nombre: '', slug: '', razonSocial: '', rut: '', direccion: '', telefono: '', celular: '', email: '', division: '', logoUrl: '', colorPrimario: 'hsl(217,74%,45%)', colorFondo: '#121212',
   };
 
   const startEdit = (t: any) => {
@@ -114,6 +122,11 @@ export default function AdminClient() {
   };
 
   const guardar = async (isNew = false) => {
+    if (!form.nombre?.trim()) { toast.error('El nombre del taller es requerido'); return; }
+    if (form.rut?.trim() && !validarRut(form.rut)) { toast.error('RUT inválido — formato: 12.345.678-9'); return; }
+    if (form.telefono?.trim() && !validarTelefono(form.telefono)) { toast.error('Teléfono inválido — solo dígitos, 8-15 caracteres'); return; }
+    if (form.celular?.trim() && !validarTelefono(form.celular)) { toast.error('Celular inválido — solo dígitos, 8-15 caracteres'); return; }
+    if (form.email?.trim() && !validarEmail(form.email)) { toast.error('Email inválido'); return; }
     setSaving(true);
     try {
       const url = '/api/admin/talleres';
@@ -142,32 +155,78 @@ export default function AdminClient() {
   };
 
   const crearUsuario = async (tallerId: string) => {
-    const email = prompt('Email del nuevo usuario:');
-    if (!email) return;
-    const nombre = prompt('Nombre completo:');
-    if (!nombre) return;
-    const password = prompt('Contraseña (min. 6 caracteres):');
-    if (!password || password.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
-    const rol = prompt('Rol (ADMIN, JEFE_TALLER, RECEPCION, FINANZAS):', 'ADMIN');
-    if (!rol) return;
-
+    if (!nuEmail.trim() || !nuNombre.trim() || !nuPassword.trim()) {
+      toast.error('Nombre, email y contraseña son requeridos'); return;
+    }
+    if (nuPassword.length < 6) { toast.error('Contraseña mínimo 6 caracteres'); return; }
+    setNuSaving(true);
     try {
       const r = await fetch('/api/usuarios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, nombre, password, rol, tallerId }),
+        body: JSON.stringify({ email: nuEmail.trim(), nombre: nuNombre.trim(), password: nuPassword, rol: nuRol, tallerId }),
       });
       const j = await r.json();
-      if (!r.ok) { toast.error(j?.error || 'Error al crear usuario'); return; }
-      toast.success(`Usuario ${email} creado`);
-      fetchTalleres();
-      if (detalle?.id === tallerId) verDetalle(tallerId);
+      if (!r.ok) { toast.error(j?.error || 'Error al crear usuario'); setNuSaving(false); return; }
+      toast.success(`Usuario ${nuEmail} creado`);
+      setNuEmail(''); setNuNombre(''); setNuPassword(''); setNuRol('ADMIN');
+      setShowNuevoUsuario(false);
+      verDetalle(tallerId);
+    } catch { toast.error('Error'); }
+    setNuSaving(false);
+  };
+
+  const startEditUsuario = (u: any) => {
+    setEditUsuarioId(u.id);
+    setEuNombre(u.nombre);
+    setEuRol(u.rol);
+    setEuPassword('');
+  };
+
+  const editarUsuario = async (tallerId: string) => {
+    if (!euNombre.trim()) { toast.error('Nombre requerido'); return; }
+    setEuSaving(true);
+    try {
+      const payload: any = { id: editUsuarioId, nombre: euNombre.trim(), rol: euRol };
+      if (euPassword.trim()) {
+        if (euPassword.length < 6) { toast.error('Contraseña mínimo 6 caracteres'); setEuSaving(false); return; }
+        payload.password = euPassword;
+      }
+      const r = await fetch('/api/usuarios', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const j = await r.json();
+      if (!r.ok) { toast.error(j?.error || 'Error al editar usuario'); setEuSaving(false); return; }
+      toast.success('Usuario actualizado');
+      setEditUsuarioId(null);
+      verDetalle(tallerId);
+    } catch { toast.error('Error'); } finally { setEuSaving(false); }
+  };
+
+  const eliminarUsuario = async (userId: string, nombre: string, tallerId: string) => {
+    if (!confirm(`¿Eliminar usuario "${nombre}"? Si tiene OTs asociadas, será desactivado en lugar de eliminado.`)) return;
+    try {
+      const r = await fetch(`/api/usuarios?id=${userId}`, { method: 'DELETE' });
+      const j = await r.json();
+      if (!r.ok) { toast.error(j?.error || 'Error'); return; }
+      toast.success(j?.desactivado ? `${nombre} desactivado (tiene OTs asociadas)` : `${nombre} eliminado`);
+      verDetalle(tallerId);
+    } catch { toast.error('Error'); }
+  };
+
+  const toggleUsuarioActivo = async (userId: string, activo: boolean, tallerId: string) => {
+    try {
+      await fetch('/api/usuarios', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, activo: !activo }),
+      });
+      toast.success(activo ? 'Usuario desactivado' : 'Usuario activado');
+      verDetalle(tallerId);
     } catch { toast.error('Error'); }
   };
 
   if (loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-[#F4B63D]" />
+      <Loader2 className="w-8 h-8 animate-spin text-[hsl(217,74%,45%)]" />
     </div>
   );
 
@@ -183,7 +242,7 @@ export default function AdminClient() {
         <div>
           <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">COLOR PRIMARIO</label>
           <div className="flex gap-2 items-center">
-            <input type="color" value={form.colorPrimario ?? '#F4B63D'} onChange={e => setForm({ ...form, colorPrimario: e.target.value })} className="w-10 h-8 rounded border border-border cursor-pointer" />
+            <input type="color" value={form.colorPrimario ?? 'hsl(217,74%,45%)'} onChange={e => setForm({ ...form, colorPrimario: e.target.value })} className="w-10 h-8 rounded border border-border cursor-pointer" />
             <span className="text-xs text-muted-foreground">{form.colorPrimario}</span>
           </div>
         </div>
@@ -198,7 +257,7 @@ export default function AdminClient() {
       {/* Logo Upload */}
       <LogoUploader currentUrl={form.logoUrl ?? ''} onUploaded={(url) => setForm({ ...form, logoUrl: url })} />
       <div className="flex gap-2">
-        <Button onClick={() => guardar(isNew)} disabled={saving || !form.nombre?.trim()} className="bg-[#F4B63D] hover:bg-[#F4B63D]/90 text-black">
+        <Button onClick={() => guardar(isNew)} disabled={saving || !form.nombre?.trim()} className="bg-[hsl(217,74%,45%)] hover:bg-[hsl(217,74%,45%)]/90 text-black">
           {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : isNew ? <Plus className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
           {saving ? 'Guardando...' : isNew ? 'Crear Taller' : 'Guardar Cambios'}
         </Button>
@@ -213,11 +272,11 @@ export default function AdminClient() {
       <header className="bg-card border-b border-border px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#F4B63D]/10 border border-[#F4B63D]/30 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-[#F4B63D]" />
+            <div className="w-10 h-10 rounded-lg bg-[hsl(217,74%,45%)]/10 border border-[hsl(217,74%,45%)]/30 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-[hsl(217,74%,45%)]" />
             </div>
             <div>
-              <h1 className="font-extrabold text-lg tracking-tight">ÉXITO Fleet — Super Admin</h1>
+              <h1 className="font-extrabold text-lg tracking-tight">D Motor â€” Super Admin</h1>
               <p className="text-xs text-muted-foreground">Gestión de talleres y usuarios</p>
             </div>
           </div>
@@ -237,7 +296,7 @@ export default function AdminClient() {
             <Card><CardContent className="p-4"><p className="text-[10px] font-bold text-muted-foreground tracking-widest">TALLERES</p><p className="text-3xl font-black mt-1">{talleres.length}</p></CardContent></Card>
             <Card><CardContent className="p-4"><p className="text-[10px] font-bold text-muted-foreground tracking-widest">USUARIOS TOTAL</p><p className="text-3xl font-black mt-1">{talleres.reduce((s: number, t: any) => s + (t._count?.usuarios ?? 0), 0)}</p></CardContent></Card>
             <Card><CardContent className="p-4"><p className="text-[10px] font-bold text-muted-foreground tracking-widest">CLIENTES TOTAL</p><p className="text-3xl font-black mt-1">{talleres.reduce((s: number, t: any) => s + (t._count?.clientes ?? 0), 0)}</p></CardContent></Card>
-            <Card><CardContent className="p-4"><p className="text-[10px] font-bold text-muted-foreground tracking-widest">OTs TOTAL</p><p className="text-3xl font-black text-[#F4B63D] mt-1">{talleres.reduce((s: number, t: any) => s + (t._count?.ordenes ?? 0), 0)}</p></CardContent></Card>
+            <Card><CardContent className="p-4"><p className="text-[10px] font-bold text-muted-foreground tracking-widest">OTs TOTAL</p><p className="text-3xl font-black text-[hsl(217,74%,45%)] mt-1">{talleres.reduce((s: number, t: any) => s + (t._count?.ordenes ?? 0), 0)}</p></CardContent></Card>
           </div>
         )}
 
@@ -245,11 +304,11 @@ export default function AdminClient() {
         {tab !== 'detalle' && (
           <div className="flex items-center gap-2 mb-6">
             <button onClick={() => setTab('talleres')}
-              className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'talleres' ? 'border-[#F4B63D] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+              className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'talleres' ? 'border-[hsl(217,74%,45%)] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
               <Building2 className="w-4 h-4 inline mr-2" /> Talleres
             </button>
             <button onClick={() => { setTab('nuevo'); setForm({ ...nuevoTallerForm }); }}
-              className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'nuevo' ? 'border-[#F4B63D] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+              className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'nuevo' ? 'border-[hsl(217,74%,45%)] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
               <Plus className="w-4 h-4 inline mr-2" /> Nuevo Taller
             </button>
           </div>
@@ -266,7 +325,7 @@ export default function AdminClient() {
             )}
             <div className="space-y-4">
               {talleresFiltrados.map((t: any) => (
-                <Card key={t.id} className={`border transition hover:border-[#F4B63D]/40 cursor-pointer ${!t.activo ? 'opacity-50' : ''}`}>
+                <Card key={t.id} className={`border transition hover:border-[hsl(217,74%,45%)]/40 cursor-pointer ${!t.activo ? 'opacity-50' : ''}`}>
                   <CardContent className="p-5">
                     {editId === t.id ? (
                       renderEditForm(false)
@@ -285,10 +344,10 @@ export default function AdminClient() {
                             <Badge className="text-[9px] bg-primary/20 text-primary">{t.slug}</Badge>
                             {!t.activo && <Badge className="text-[9px] bg-red-500/20 text-red-400">Inactivo</Badge>}
                           </div>
-                          {t.razonSocial && <p className="text-xs text-muted-foreground mt-0.5">{t.razonSocial}{t.rut ? ` — ${t.rut}` : ''}</p>}
+                          {t.razonSocial && <p className="text-xs text-muted-foreground mt-0.5">{t.razonSocial}{t.rut ? ` â€” ${t.rut}` : ''}</p>}
                           <div className="flex gap-4 mt-2">
                             <span className="text-xs text-muted-foreground"><Users className="w-3 h-3 inline mr-1" />{t._count?.usuarios ?? 0} usuarios</span>
-                            <span className="text-xs text-muted-foreground"><Truck className="w-3 h-3 inline mr-1" />{t._count?.vehiculos ?? 0} vehículos</span>
+                            <span className="text-xs text-muted-foreground"><Truck className="w-3 h-3 inline mr-1" />{t._count?.vehiculos ?? 0} Vehículos</span>
                             <span className="text-xs text-muted-foreground"><FileText className="w-3 h-3 inline mr-1" />{t._count?.ordenes ?? 0} OTs</span>
                           </div>
                           <div className="flex items-center gap-1 mt-2">
@@ -324,7 +383,7 @@ export default function AdminClient() {
         {tab === 'nuevo' && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Plus className="w-4 h-4 text-[#F4B63D]" /> Crear Nuevo Taller</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Plus className="w-4 h-4 text-[hsl(217,74%,45%)]" /> Crear Nuevo Taller</CardTitle>
             </CardHeader>
             <CardContent>
               {renderEditForm(true)}
@@ -341,12 +400,12 @@ export default function AdminClient() {
 
             {detalleLoading ? (
               <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-[#F4B63D]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[hsl(217,74%,45%)]" />
               </div>
             ) : detalle ? (
               <div className="space-y-6">
                 {/* Header del taller */}
-                <Card className="border-[#F4B63D]/30">
+                <Card className="border-[hsl(217,74%,45%)]/30">
                   <CardContent className="p-6">
                     <div className="flex flex-col sm:flex-row gap-6">
                       {/* Logo */}
@@ -363,7 +422,7 @@ export default function AdminClient() {
                           <Badge className="text-[10px] bg-primary/20 text-primary">{detalle.slug}</Badge>
                           {!detalle.activo && <Badge className="text-[10px] bg-red-500/20 text-red-400">Inactivo</Badge>}
                         </div>
-                        {detalle.razonSocial && <p className="text-sm text-muted-foreground mt-1">{detalle.razonSocial}{detalle.rut ? ` — ${detalle.rut}` : ''}</p>}
+                        {detalle.razonSocial && <p className="text-sm text-muted-foreground mt-1">{detalle.razonSocial}{detalle.rut ? ` â€” ${detalle.rut}` : ''}</p>}
                         {detalle.division && <p className="text-xs text-muted-foreground mt-0.5">División: {detalle.division}</p>}
 
                         <div className="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs text-muted-foreground">
@@ -397,16 +456,43 @@ export default function AdminClient() {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <Card><CardContent className="p-4"><p className="text-[10px] font-bold text-muted-foreground tracking-widest">USUARIOS</p><p className="text-3xl font-black mt-1">{detalle._count?.usuarios ?? 0}</p></CardContent></Card>
                   <Card><CardContent className="p-4"><p className="text-[10px] font-bold text-muted-foreground tracking-widest">CLIENTES</p><p className="text-3xl font-black mt-1">{detalle._count?.clientes ?? 0}</p></CardContent></Card>
-                  <Card><CardContent className="p-4"><p className="text-[10px] font-bold text-muted-foreground tracking-widest">VEHÍCULOS</p><p className="text-3xl font-black mt-1">{detalle._count?.vehiculos ?? 0}</p></CardContent></Card>
-                  <Card><CardContent className="p-4"><p className="text-[10px] font-bold text-muted-foreground tracking-widest">ÓRDENES</p><p className="text-3xl font-black text-[#F4B63D] mt-1">{detalle._count?.ordenes ?? 0}</p></CardContent></Card>
+                  <Card><CardContent className="p-4"><p className="text-[10px] font-bold text-muted-foreground tracking-widest">VEHÃCULOS</p><p className="text-3xl font-black mt-1">{detalle._count?.vehiculos ?? 0}</p></CardContent></Card>
+                  <Card><CardContent className="p-4"><p className="text-[10px] font-bold text-muted-foreground tracking-widest">Ã“RDENES</p><p className="text-3xl font-black text-[hsl(217,74%,45%)] mt-1">{detalle._count?.ordenes ?? 0}</p></CardContent></Card>
                 </div>
 
                 {/* Usuarios del taller */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-[#F4B63D]" /> Usuarios ({detalle.usuarios?.length ?? 0})</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-[hsl(217,74%,45%)]" /> Usuarios ({detalle.usuarios?.length ?? 0})</CardTitle>
+                      <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { setShowNuevoUsuario(v => !v); setNuEmail(''); setNuNombre(''); setNuPassword(''); }}>
+                        <Plus className="w-3 h-3 mr-1" /> Nuevo Usuario
+                      </Button>
+                    </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
+                    {showNuevoUsuario && (
+                      <div className="p-3 border border-primary/30 rounded-lg bg-primary/5 space-y-2">
+                        <p className="text-[10px] font-black tracking-widest text-primary">CREAR USUARIO PARA ESTE TALLER</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <Input placeholder="Nombre completo" value={nuNombre} onChange={e => setNuNombre(e.target.value)} className="h-8 text-xs" />
+                          <Input placeholder="Email" type="email" value={nuEmail} onChange={e => setNuEmail(e.target.value)} className="h-8 text-xs" />
+                          <Input placeholder="Contraseña (mín. 6 caracteres)" type="password" value={nuPassword} onChange={e => setNuPassword(e.target.value)} className="h-8 text-xs" />
+                          <select value={nuRol} onChange={e => setNuRol(e.target.value)} className="h-8 text-xs bg-background border border-border rounded-md px-2 text-foreground">
+                            <option value="ADMIN">Administrador</option>
+                            <option value="JEFE_TALLER">Jefe de Taller</option>
+                            <option value="RECEPCION">Recepción</option>
+                            <option value="FINANZAS">Finanzas</option>
+                          </select>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" className="h-7 text-xs" onClick={() => crearUsuario(detalle.id)} disabled={nuSaving}>
+                            {nuSaving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Plus className="w-3 h-3 mr-1" />} Crear
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowNuevoUsuario(false)}>Cancelar</Button>
+                        </div>
+                      </div>
+                    )}
                     {detalle.usuarios?.length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
@@ -416,33 +502,74 @@ export default function AdminClient() {
                               <th className="text-left py-2 px-3 font-semibold">Email</th>
                               <th className="text-left py-2 px-3 font-semibold">Rol</th>
                               <th className="text-left py-2 px-3 font-semibold">Estado</th>
-                              <th className="text-left py-2 px-3 font-semibold">Creado</th>
+                              <th className="text-left py-2 px-3 font-semibold">Acción</th>
                             </tr>
                           </thead>
                           <tbody>
                             {detalle.usuarios.map((u: any) => (
-                              <tr key={u.id} className="border-b border-border/50 hover:bg-muted/20">
-                                <td className="py-2.5 px-3 font-medium">{u.nombre}</td>
-                                <td className="py-2.5 px-3 text-muted-foreground"><span suppressHydrationWarning>{u.email}</span></td>
-                                <td className="py-2.5 px-3">
-                                  <Badge className="text-[9px]" variant="secondary">{ROLES_LABELS[u.rol] || u.rol}</Badge>
-                                </td>
-                                <td className="py-2.5 px-3">
-                                  <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${u.activo ? 'text-emerald-500' : 'text-red-400'}`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${u.activo ? 'bg-emerald-500' : 'bg-red-400'}`} />
-                                    {u.activo ? 'Activo' : 'Inactivo'}
-                                  </span>
-                                </td>
-                                <td className="py-2.5 px-3 text-muted-foreground">
-                                  {new Date(u.createdAt).toLocaleDateString('es-CL', { timeZone: 'UTC' })}
-                                </td>
-                              </tr>
+                              <React.Fragment key={u.id}>
+                                <tr className="border-b border-border/50 hover:bg-muted/20">
+                                  <td className="py-2.5 px-3 font-medium">{u.nombre}</td>
+                                  <td className="py-2.5 px-3 text-muted-foreground"><span suppressHydrationWarning>{u.email}</span></td>
+                                  <td className="py-2.5 px-3">
+                                    <Badge className="text-[9px]" variant="secondary">{ROLES_LABELS[u.rol] || u.rol}</Badge>
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${u.activo ? 'text-emerald-500' : 'text-red-400'}`}>
+                                      <span className={`w-1.5 h-1.5 rounded-full ${u.activo ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                                      {u.activo ? 'Activo' : 'Inactivo'}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <button onClick={() => startEditUsuario(u)}
+                                        className="text-[10px] font-bold px-2 py-0.5 rounded border border-[hsl(217,74%,45%)]/40 text-[hsl(217,74%,45%)] hover:bg-[hsl(217,74%,45%)]/10 transition">
+                                        Editar
+                                      </button>
+                                      <button onClick={() => toggleUsuarioActivo(u.id, u.activo, detalle.id)}
+                                        className={`text-[10px] font-bold px-2 py-0.5 rounded border transition ${u.activo ? 'border-red-400/40 text-red-400 hover:bg-red-400/10' : 'border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10'}`}>
+                                        {u.activo ? 'Bloquear' : 'Activar'}
+                                      </button>
+                                      <button onClick={() => eliminarUsuario(u.id, u.nombre, detalle.id)}
+                                        className="text-[10px] font-bold px-2 py-0.5 rounded border border-red-600/40 text-red-600 hover:bg-red-600/10 transition">
+                                        Eliminar
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                {editUsuarioId === u.id && (
+                                  <tr className="bg-muted/30">
+                                    <td colSpan={5} className="px-3 py-3">
+                                      <div className="flex flex-wrap gap-2 items-end">
+                                        <div>
+                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">NOMBRE</label>
+                                          <Input className="h-7 text-xs w-40" value={euNombre} onChange={e => setEuNombre(e.target.value)} />
+                                        </div>
+                                        <div>
+                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">ROL</label>
+                                          <select value={euRol} onChange={e => setEuRol(e.target.value)} className="h-7 text-xs px-2 rounded border border-border bg-background">
+                                            {Object.entries(ROLES_LABELS).filter(([k]) => k !== 'SUPER_ADMIN').map(([k, v]) => <option key={k} value={k}>{v as string}</option>)}
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">NUEVA CONTRASEÑA (opcional)</label>
+                                          <Input type="password" className="h-7 text-xs w-36" value={euPassword} onChange={e => setEuPassword(e.target.value)} placeholder="Dejar vacío = sin cambio" />
+                                        </div>
+                                        <Button size="sm" className="h-7 text-xs" onClick={() => editarUsuario(detalle.id)} disabled={euSaving}>
+                                          {euSaving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null} Guardar
+                                        </Button>
+                                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditUsuarioId(null)}>Cancelar</Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
                             ))}
                           </tbody>
                         </table>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground py-4 text-center">No hay usuarios en este taller</p>
+                      <p className="text-sm text-muted-foreground py-4 text-center">No hay usuarios en este taller. Crea el primero.</p>
                     )}
                   </CardContent>
                 </Card>
@@ -450,15 +577,15 @@ export default function AdminClient() {
                 {/* Mecánicos del taller */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2"><Wrench className="w-4 h-4 text-[#F4B63D]" /> Mecánicos ({detalle.mecanicos?.length ?? 0})</CardTitle>
+                    <CardTitle className="text-sm flex items-center gap-2"><Wrench className="w-4 h-4 text-[hsl(217,74%,45%)]" /> Mecánicos ({detalle.mecanicos?.length ?? 0})</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {detalle.mecanicos?.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {detalle.mecanicos.map((m: any) => (
                           <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-border/50">
-                            <div className="w-8 h-8 rounded-full bg-[#F4B63D]/10 flex items-center justify-center flex-shrink-0">
-                              <Wrench className="w-4 h-4 text-[#F4B63D]" />
+                            <div className="w-8 h-8 rounded-full bg-[hsl(217,74%,45%)]/10 flex items-center justify-center flex-shrink-0">
+                              <Wrench className="w-4 h-4 text-[hsl(217,74%,45%)]" />
                             </div>
                             <div className="min-w-0">
                               <p className="text-xs font-medium truncate">{m.nombre}</p>
@@ -469,7 +596,7 @@ export default function AdminClient() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground py-4 text-center">No hay mecánicos en este taller</p>
+                      <p className="text-sm text-muted-foreground py-4 text-center">No hay Mecánicos en este taller</p>
                     )}
                   </CardContent>
                 </Card>
@@ -477,7 +604,7 @@ export default function AdminClient() {
                 {/* Info adicional */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-[#F4B63D]" /> Información</CardTitle>
+                    <CardTitle className="text-sm flex items-center gap-2"><Calendar className="w-4 h-4 text-[hsl(217,74%,45%)]" /> Información</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -510,3 +637,4 @@ export default function AdminClient() {
     </div>
   );
 }
+
