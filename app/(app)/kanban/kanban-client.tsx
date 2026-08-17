@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Search, Eye, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,8 +35,11 @@ export function KanbanClient() {
   const [filtro, setFiltro] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedOT, setSelectedOT] = useState<any>(null);
-
   const [updating, setUpdating] = useState(false);
+
+  // Drag state
+  const draggingRef = useRef<{ id: string; estado: string } | null>(null);
+  const [dragOverEstado, setDragOverEstado] = useState<string | null>(null);
 
   const fetchOrdenes = () => {
     fetch('/api/ordenes')
@@ -46,8 +49,6 @@ export function KanbanClient() {
   };
 
   useEffect(() => { fetchOrdenes(); }, []);
-
-  const estadosVisibles = ESTADOS;
 
   const otsFiltradas = (ordenes ?? []).filter((ot: any) => ot.estado !== 'CERRADA').filter((ot: any) => {
     const q = filtro.toLowerCase();
@@ -79,6 +80,39 @@ export function KanbanClient() {
     setUpdating(false);
   };
 
+  const handleDragStart = (e: React.DragEvent, ot: any) => {
+    draggingRef.current = { id: ot.id, estado: ot.estado };
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    draggingRef.current = null;
+    setDragOverEstado(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, estadoId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverEstado(estadoId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Solo limpiar si salimos del contenedor de la columna
+    if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) {
+      setDragOverEstado(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, estadoId: string) => {
+    e.preventDefault();
+    setDragOverEstado(null);
+    const drag = draggingRef.current;
+    if (drag && drag.estado !== estadoId) {
+      cambiarEstado(drag.id, estadoId);
+    }
+    draggingRef.current = null;
+  };
+
   return (
     <div className="p-6 lg:p-10">
       {/* Header */}
@@ -92,38 +126,59 @@ export function KanbanClient() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input placeholder="Buscar OT, patente, cliente..." className="pl-10 w-64" value={filtro} onChange={(e: any) => setFiltro(e.target.value)} />
           </div>
-
         </div>
       </div>
 
       {/* Columns */}
       <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: 'calc(100vh - 200px)' }}>
-        {estadosVisibles.map((estado) => {
+        {ESTADOS.map((estado) => {
           const otsCol = otsFiltradas.filter((ot: any) => ot?.estado === estado.id);
+          const isDragOver = dragOverEstado === estado.id;
           return (
-            <div key={estado.id} className="flex-shrink-0 w-[280px]">
+            <div
+              key={estado.id}
+              className="flex-shrink-0 w-[280px]"
+              onDragOver={(e) => handleDragOver(e, estado.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, estado.id)}
+            >
               {/* Column header */}
               <div className="flex items-center gap-2 mb-3 px-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: estado.color }} />
+                <div className="w-3 h-3 rounded-full transition-transform" style={{ backgroundColor: estado.color }} />
                 <span className="text-sm font-semibold text-foreground">{estado.label}</span>
                 <Badge variant="secondary" className="text-xs ml-auto">{otsCol.length}</Badge>
               </div>
 
-              {/* Cards */}
+              {/* Cards container */}
               <ScrollArea className="h-[calc(100vh-260px)]">
-                <div className="space-y-3 pr-2">
+                <div
+                  className={`space-y-3 pr-2 min-h-[100px] rounded-lg transition-all duration-150 ${
+                    isDragOver ? 'bg-primary/5 ring-2 ring-primary/30 ring-dashed' : ''
+                  }`}
+                >
                   {loading ? (
                     [1, 2].map((i) => <div key={i} className="h-32 bg-muted rounded-lg animate-pulse" />)
                   ) : otsCol.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground text-xs">Sin OTs</div>
+                    <div className={`text-center py-8 text-xs transition-colors ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`}>
+                      {isDragOver ? 'Soltar aquí' : 'Sin OTs'}
+                    </div>
                   ) : (
                     otsCol.map((ot: any, i: number) => {
                       const dias = diasDesde(ot?.fechaIngreso);
                       const esAlerta = estado.id === 'ESPERANDO_APROBACION' && diasDesde(ot?.fechaValorizacion ?? ot?.fechaIngreso) > 3;
                       return (
-                        <motion.div key={ot?.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+                        <motion.div
+                          key={ot?.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.03 }}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e as any, ot)}
+                          onDragEnd={handleDragEnd}
+                          style={{ cursor: 'grab' }}
+                        >
                           <Card
-                            className={`cursor-pointer hover:shadow-lg transition-all border ${
+                            className={`hover:shadow-lg transition-all border select-none ${
                               esAlerta ? 'border-red-500/50 shadow-red-500/10' : 'border-border'
                             }`}
                             onClick={() => setSelectedOT(ot)}
@@ -151,6 +206,12 @@ export function KanbanClient() {
                         </motion.div>
                       );
                     })
+                  )}
+                  {/* Drop zone indicator when column has cards */}
+                  {isDragOver && otsCol.length > 0 && (
+                    <div className="h-16 rounded-lg border-2 border-dashed border-primary/40 flex items-center justify-center">
+                      <span className="text-xs text-primary/60">Soltar aquí</span>
+                    </div>
                   )}
                 </div>
               </ScrollArea>
@@ -217,7 +278,6 @@ export function KanbanClient() {
               </div>
             )}
 
-            {/* Cambiar estado */}
             <div>
               <div className="text-xs text-muted-foreground mb-2">Cambiar Estado</div>
               <Select

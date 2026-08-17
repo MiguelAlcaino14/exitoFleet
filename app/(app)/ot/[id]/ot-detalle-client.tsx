@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, Truck, User, Calendar, Gauge, Fuel, FileText, Wrench, Camera, Upload, Loader2, Clock, Send, Printer, Plus, X, MessageSquare, Mail, Check, UserPlus, ClipboardCheck, Save } from 'lucide-react';
+import { ArrowLeft, Truck, User, Calendar, Gauge, Fuel, FileText, Wrench, Camera, Upload, Loader2, Clock, Send, Printer, Plus, X, MessageSquare, Mail, Check, UserPlus, ClipboardCheck, Save, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -732,8 +732,8 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                                 <span className={`text-sm text-right font-semibold ${esDesc ? 'text-destructive' : 'text-foreground'}`}>
                                   {esDesc ? `-${formatCLP(Math.abs(totalItem))}` : formatCLP(totalItem)}
                                 </span>
-                                <button onClick={() => eliminarItem(item.id)} className="text-muted-foreground/30 hover:text-destructive text-center text-sm">
-                                  <X className="w-3.5 h-3.5" />
+                                <button onClick={() => eliminarItem(item.id)} title="Eliminar" className="text-muted-foreground hover:text-destructive text-center text-sm transition-colors">
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             );
@@ -803,7 +803,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                   {/* Estado y niveles */}
                   <div>
                     <h3 className="text-[10px] font-black tracking-[2px] text-primary mb-3">ESTADO DEL VEHÍCULO</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div>
                         <label className="text-[10px] font-bold text-muted-foreground block mb-1">ESTADO CARROCERÍA</label>
                         <select value={checklist.estadoCarroceria ?? ''}
@@ -842,8 +842,24 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                           <option value="BAJO">Bajo / Crítico</option>
                         </select>
                       </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-muted-foreground block mb-1">NIVEL COMBUSTIBLE</label>
+                        <div className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+                          {ot?.nivelCombustible ?? <span className="text-muted-foreground">No registrado</span>}
+                        </div>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Descripción de ingreso (solo lectura, viene de la creación de la OT) */}
+                  {ot?.descripcion && (
+                    <div>
+                      <h3 className="text-[10px] font-black tracking-[2px] text-primary mb-3">DESCRIPCIÓN DE INGRESO</h3>
+                      <div className="w-full bg-secondary/30 border border-border rounded-lg px-3 py-2 text-sm text-foreground whitespace-pre-wrap">
+                        {ot.descripcion}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Observaciones */}
                   <div>
