@@ -53,9 +53,8 @@ export function validarEmail(email: string): boolean {
 export function validarPatente(patente: string): boolean {
   if (!patente?.trim()) return false;
   const clean = patente.trim().toUpperCase().replace(/\s/g, '');
-  // Formato nuevo: ABCD-12 (4 letras + 2 dígitos)
-  // Formato antiguo: AB-1234 (2 letras + 4 dígitos) o ABCD-123 (4 letras + 3 dígitos)
-  return /^[A-Z]{2,4}-\d{2,4}$/.test(clean);
+  // Auto nuevo: ABCD-12 | Auto antiguo: AB-1234 | Moto/remolque: A-1234, AB-123, ABC-NNN
+  return /^[A-Z]{1,4}-\d{2,5}$/.test(clean);
 }
 
 export function formatPatenteInput(raw: string): string {

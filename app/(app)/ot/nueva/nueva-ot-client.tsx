@@ -67,7 +67,7 @@ export function NuevaOTClient() {
 
   const buscarPatente = async () => {
     if (!patente.trim()) { toast.error('Ingresa una patente'); return; }
-    if (!validarPatente(patente)) { toast.error('Patente inválida — formato: ABCD-12 o AB-1234'); return; }
+    if (!validarPatente(patente)) { toast.error('Patente inválida — formato: ABCD-12, AB-1234 o A-1234'); return; }
     setBuscando(true);
     try {
       const res = await fetch(`/api/vehiculos/buscar?patente=${encodeURIComponent(patente.trim())}`);
