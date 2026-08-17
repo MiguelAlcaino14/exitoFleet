@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getTallerScope, tallerWhere } from '@/lib/taller';
 import { isValidEmail } from '@/lib/utils';
+import { sendEmail } from '@/lib/email';
 
 const MAX_DESTINATARIOS = 10;
 
@@ -113,11 +114,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const empresaNombre = configTaller?.razonSocial || 'D Motor';
 
     let cuentaNombre = empresaNombre;
+    let cuentaEmail: string | undefined;
     if (cuentaCorreoId) {
       const cuenta = await prisma.cuentaCorreo.findFirst({
         where: { id: cuentaCorreoId, ...tallerWhere(scope) },
       });
-      if (cuenta) cuentaNombre = cuenta.nombre;
+      if (cuenta) { cuentaNombre = cuenta.nombre; cuentaEmail = cuenta.email; }
     }
 
     const totalNeto = ot.itemsValorizacion.reduce((acc, i) => acc + i.precioVenta * i.cantidad, 0);
@@ -138,28 +140,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
 
     const subject = `Cotización OT-${String(ot.otNumero).padStart(6, '0')} - ${[ot.vehiculo?.marca, ot.vehiculo?.modelo].filter(Boolean).join(' ')} - ${ot.vehiculo?.patente ?? ''}`;
-    const senderEmail = `noreply@${appUrl ? new URL(appUrl).hostname : 'dmotor.cl'}`;
 
     const results = await Promise.all(
       emails.map(async (email) => {
         try {
-          const response = await fetch('https://apps.abacus.ai/api/sendNotificationEmail', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              deployment_token: process.env.ABACUSAI_API_KEY,
-              app_id: process.env.WEB_APP_ID,
-              notification_id: process.env.NOTIF_ID_COTIZACIN_DE_TALLER,
-              subject,
-              body: htmlBody,
-              is_html: true,
-              recipient_email: email,
-              sender_email: senderEmail,
-              sender_alias: empresaNombre,
-            }),
+          await sendEmail({
+            to: email,
+            subject,
+            html: htmlBody,
+            fromName: cuentaNombre,
+            replyTo: cuentaEmail,
           });
-          const result = await response.json();
-          return { email, success: result.success !== false };
+          return { email, success: true };
         } catch {
           return { email, success: false };
         }
