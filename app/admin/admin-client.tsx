@@ -224,12 +224,6 @@ export default function AdminClient() {
     } catch { toast.error('Error'); }
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-[hsl(217,74%,45%)]" />
-    </div>
-  );
-
   const renderEditForm = (isNew: boolean) => (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -263,6 +257,12 @@ export default function AdminClient() {
         </Button>
         {!isNew && <Button variant="ghost" onClick={() => setEditId(null)} className="text-xs"><X className="w-3 h-3 mr-1" /> Cancelar</Button>}
       </div>
+    </div>
+  );
+
+  if (loading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-[hsl(217,74%,45%)]" />
     </div>
   );
 
