@@ -12,6 +12,6 @@ export function createS3Client() {
   const region = process.env.AWS_REGION ?? 'us-east-1';
   return new S3Client({
     region,
-    ...(endpoint ? { endpoint, forcePathStyle: false } : {}),
+    ...(endpoint ? { endpoint, forcePathStyle: true } : {}),
   });
 }
