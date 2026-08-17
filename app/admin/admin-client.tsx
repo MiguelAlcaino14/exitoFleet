@@ -71,6 +71,52 @@ function LogoUploader({ currentUrl, onUploaded }: { currentUrl: string; onUpload
   );
 }
 
+const CAMPOS_TALLER = [
+  {l:'Nombre *',k:'nombre'},{l:'Slug (URL)',k:'slug'},{l:'Razón Social',k:'razonSocial'},
+  {l:'RUT',k:'rut'},{l:'Dirección',k:'direccion'},{l:'Teléfono',k:'telefono'},
+  {l:'Celular',k:'celular'},{l:'Email',k:'email'},{l:'División',k:'division'},
+];
+
+function TallerEditForm({ isNew, form, setForm, saving, guardar, setEditId }: {
+  isNew: boolean; form: any; setForm: (f: any) => void;
+  saving: boolean; guardar: (isNew: boolean) => void; setEditId: (id: any) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {CAMPOS_TALLER.map(f => (
+          <div key={f.k}>
+            <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">{f.l}</label>
+            <Input value={form[f.k] ?? ''} onChange={(e: any) => setForm({ ...form, [f.k]: e.target.value })} placeholder={f.k === 'slug' ? 'Se genera del nombre si vacio' : ''} />
+          </div>
+        ))}
+        <div>
+          <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">COLOR PRIMARIO</label>
+          <div className="flex gap-2 items-center">
+            <input type="color" value={form.colorPrimario ?? 'hsl(217,74%,45%)'} onChange={(e: any) => setForm({ ...form, colorPrimario: e.target.value })} className="w-10 h-8 rounded border border-border cursor-pointer" />
+            <span className="text-xs text-muted-foreground">{form.colorPrimario}</span>
+          </div>
+        </div>
+        <div>
+          <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">COLOR FONDO</label>
+          <div className="flex gap-2 items-center">
+            <input type="color" value={form.colorFondo ?? '#121212'} onChange={(e: any) => setForm({ ...form, colorFondo: e.target.value })} className="w-10 h-8 rounded border border-border cursor-pointer" />
+            <span className="text-xs text-muted-foreground">{form.colorFondo}</span>
+          </div>
+        </div>
+      </div>
+      <LogoUploader currentUrl={form.logoUrl ?? ''} onUploaded={(url: string) => setForm({ ...form, logoUrl: url })} />
+      <div className="flex gap-2">
+        <Button onClick={() => guardar(isNew)} disabled={saving || !form.nombre?.trim()} className="bg-[hsl(217,74%,45%)] hover:bg-[hsl(217,74%,45%)]/90 text-black">
+          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : isNew ? <Plus className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+          {saving ? 'Guardando...' : isNew ? 'Crear Taller' : 'Guardar Cambios'}
+        </Button>
+        {!isNew && <Button variant="ghost" onClick={() => setEditId(null)} className="text-xs"><X className="w-3 h-3 mr-1" /> Cancelar</Button>}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminClient() {
   const { data: session } = useSession() || {};
   const router = useRouter();
@@ -224,41 +270,6 @@ export default function AdminClient() {
     } catch { toast.error('Error'); }
   };
 
-  const renderEditForm = (isNew: boolean) => (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {[{l:'Nombre *',k:'nombre'},{l:'Slug (URL)',k:'slug'},{l:'Razón Social',k:'razonSocial'},{l:'RUT',k:'rut'},{l:'Dirección',k:'direccion'},{l:'Teléfono',k:'telefono'},{l:'Celular',k:'celular'},{l:'Email',k:'email'},{l:'División',k:'division'}].map(f => (
-          <div key={f.k}>
-            <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">{f.l}</label>
-            <Input value={form[f.k] ?? ''} onChange={e => setForm({ ...form, [f.k]: e.target.value })} placeholder={f.k === 'slug' ? 'Se genera del nombre si vacío' : ''} />
-          </div>
-        ))}
-        <div>
-          <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">COLOR PRIMARIO</label>
-          <div className="flex gap-2 items-center">
-            <input type="color" value={form.colorPrimario ?? 'hsl(217,74%,45%)'} onChange={e => setForm({ ...form, colorPrimario: e.target.value })} className="w-10 h-8 rounded border border-border cursor-pointer" />
-            <span className="text-xs text-muted-foreground">{form.colorPrimario}</span>
-          </div>
-        </div>
-        <div>
-          <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">COLOR FONDO</label>
-          <div className="flex gap-2 items-center">
-            <input type="color" value={form.colorFondo ?? '#121212'} onChange={e => setForm({ ...form, colorFondo: e.target.value })} className="w-10 h-8 rounded border border-border cursor-pointer" />
-            <span className="text-xs text-muted-foreground">{form.colorFondo}</span>
-          </div>
-        </div>
-      </div>
-      {/* Logo Upload */}
-      <LogoUploader currentUrl={form.logoUrl ?? ''} onUploaded={(url) => setForm({ ...form, logoUrl: url })} />
-      <div className="flex gap-2">
-        <Button onClick={() => guardar(isNew)} disabled={saving || !form.nombre?.trim()} className="bg-[hsl(217,74%,45%)] hover:bg-[hsl(217,74%,45%)]/90 text-black">
-          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : isNew ? <Plus className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-          {saving ? 'Guardando...' : isNew ? 'Crear Taller' : 'Guardar Cambios'}
-        </Button>
-        {!isNew && <Button variant="ghost" onClick={() => setEditId(null)} className="text-xs"><X className="w-3 h-3 mr-1" /> Cancelar</Button>}
-      </div>
-    </div>
-  );
 
   if (loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -328,7 +339,7 @@ export default function AdminClient() {
                 <Card key={t.id} className={`border transition hover:border-[hsl(217,74%,45%)]/40 cursor-pointer ${!t.activo ? 'opacity-50' : ''}`}>
                   <CardContent className="p-5">
                     {editId === t.id ? (
-                      renderEditForm(false)
+                      <TallerEditForm isNew={false} form={form} setForm={setForm} saving={saving} guardar={guardar} setEditId={setEditId} />
                     ) : (
                       <div className="flex flex-col sm:flex-row gap-4" onClick={() => verDetalle(t.id)}>
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden" style={{ backgroundColor: `${t.colorPrimario}20` }}>
@@ -386,7 +397,7 @@ export default function AdminClient() {
               <CardTitle className="text-base flex items-center gap-2"><Plus className="w-4 h-4 text-[hsl(217,74%,45%)]" /> Crear Nuevo Taller</CardTitle>
             </CardHeader>
             <CardContent>
-              {renderEditForm(true)}
+              <TallerEditForm isNew={true} form={form} setForm={setForm} saving={saving} guardar={guardar} setEditId={setEditId} />
             </CardContent>
           </Card>
         )}
