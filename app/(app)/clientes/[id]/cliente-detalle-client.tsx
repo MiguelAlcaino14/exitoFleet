@@ -377,12 +377,8 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
                 <Input value={nuevoVehiculo.motor} onChange={(e) => setNuevoVehiculo({ ...nuevoVehiculo, motor: e.target.value })} className="h-8 text-sm" />
               </div>
               <div>
-                <label className="text-[9px] font-bold tracking-wider text-muted-foreground mb-1 block">CHASIS</label>
-                <Input value={nuevoVehiculo.chasis} onChange={(e) => setNuevoVehiculo({ ...nuevoVehiculo, chasis: e.target.value })} className="h-8 text-sm" />
-              </div>
-              <div>
-                <label className="text-[9px] font-bold tracking-wider text-muted-foreground mb-1 block">VIN</label>
-                <Input value={nuevoVehiculo.vin} onChange={(e) => setNuevoVehiculo({ ...nuevoVehiculo, vin: e.target.value })} className="h-8 text-sm" />
+                <label className="text-[9px] font-bold tracking-wider text-muted-foreground mb-1 block">VIN / CHASIS</label>
+                <Input value={nuevoVehiculo.vin} onChange={(e) => setNuevoVehiculo({ ...nuevoVehiculo, vin: e.target.value, chasis: e.target.value })} className="h-8 text-sm" />
               </div>
             </div>
             {vehiculoError && <p className="text-sm text-red-400 mb-2">{vehiculoError}</p>}

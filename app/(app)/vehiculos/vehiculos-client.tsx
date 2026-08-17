@@ -353,12 +353,8 @@ export function VehiculosClient() {
                 <Input value={nuevoData.motor} onChange={(e: any) => setNuevoData({ ...nuevoData, motor: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Chasis</label>
-                <Input value={nuevoData.chasis} onChange={(e: any) => setNuevoData({ ...nuevoData, chasis: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">VIN</label>
-                <Input value={nuevoData.vin} onChange={(e: any) => setNuevoData({ ...nuevoData, vin: e.target.value })} />
+                <label className="text-xs text-muted-foreground mb-1 block">VIN / Chasis</label>
+                <Input value={nuevoData.vin} onChange={(e: any) => setNuevoData({ ...nuevoData, vin: e.target.value, chasis: e.target.value })} />
               </div>
               <div className="col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">Cliente *</label>
@@ -414,12 +410,8 @@ export function VehiculosClient() {
                 <Input value={editData.motor} onChange={(e: any) => setEditData({ ...editData, motor: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Chasis</label>
-                <Input value={editData.chasis} onChange={(e: any) => setEditData({ ...editData, chasis: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">VIN</label>
-                <Input value={editData.vin} onChange={(e: any) => setEditData({ ...editData, vin: e.target.value })} />
+                <label className="text-xs text-muted-foreground mb-1 block">VIN / Chasis</label>
+                <Input value={editData.vin || editData.chasis} onChange={(e: any) => setEditData({ ...editData, vin: e.target.value, chasis: e.target.value })} />
               </div>
               <div className="col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">Cliente asignado</label>
