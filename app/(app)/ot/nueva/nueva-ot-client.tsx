@@ -266,7 +266,7 @@ export function NuevaOTClient() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Kilometraje</Label>
-                    <Input className="mt-1 font-mono" value={km} onChange={(e: any) => setKm(e.target.value)} placeholder="540.000" type="number" />
+                    <Input className="mt-1 font-mono" value={km} onChange={(e: any) => setKm(e.target.value)} placeholder="Ej: 54000" type="number" />
                   </div>
                   <div>
                     <Label>Nivel Combustible</Label>

@@ -6,6 +6,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Building2, Plus, Pencil, Save, X, Users, Truck, FileText, Search, LogOut, Loader2, ShieldCheck, Palette, ArrowLeft, Upload, Wrench, Mail, Phone, MapPin, Calendar, ImageIcon } from 'lucide-react';
+import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,12 +119,12 @@ export default function AdminClient() {
   }, [talleres, filtro]);
 
   const nuevoTallerForm = {
-    nombre: '', slug: '', razonSocial: '', rut: '', direccion: '', telefono: '', celular: '', email: '', division: '', logoUrl: '', colorPrimario: 'hsl(217,74%,45%)', colorFondo: '#121212',
+    nombre: '', slug: '', razonSocial: '', rut: '', direccion: '', telefono: '', celular: '', email: '', division: '', logoUrl: '', colorPrimario: '#2563eb', colorFondo: '#121212',
   };
 
   const startEdit = (t: any) => {
     setEditId(t.id);
-    setForm({ nombre: t.nombre, razonSocial: t.razonSocial, rut: t.rut, direccion: t.direccion, telefono: t.telefono, celular: t.celular, email: t.email, division: t.division, logoUrl: t.logoUrl, colorPrimario: t.colorPrimario, colorFondo: t.colorFondo });
+    setForm({ nombre: t.nombre, slug: t.slug, razonSocial: t.razonSocial, rut: t.rut, direccion: t.direccion, telefono: t.telefono, celular: t.celular, email: t.email, division: t.division, logoUrl: t.logoUrl, colorPrimario: t.colorPrimario, colorFondo: t.colorFondo });
   };
 
   const guardar = async (isNew = false) => {
@@ -291,6 +292,7 @@ export default function AdminClient() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground hidden sm:inline">{(session?.user as any)?.email}</span>
+            <ThemeToggleButton />
             <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: '/auth/login' })} className="text-muted-foreground">
               <LogOut className="w-4 h-4 mr-1" /> Salir
             </Button>
@@ -369,7 +371,7 @@ export default function AdminClient() {
                           <Button variant="outline" size="sm" onClick={() => startEdit(t)} className="text-xs">
                             <Pencil className="w-3 h-3 mr-1" /> Editar
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => crearUsuario(t.id)} className="text-xs">
+                          <Button variant="outline" size="sm" onClick={() => { verDetalle(t.id); setShowNuevoUsuario(true); }} className="text-xs">
                             <Plus className="w-3 h-3 mr-1" /> Usuario
                           </Button>
                         </div>

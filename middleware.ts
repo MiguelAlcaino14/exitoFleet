@@ -1,13 +1,35 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
+const ROLE_ROUTES: [string, string[]][] = [
+  ['/admin', ['SUPER_ADMIN']],
+  ['/api/admin', ['SUPER_ADMIN']],
+  ['/finanzas', ['ADMIN', 'FINANZAS', 'SUPER_ADMIN']],
+  ['/api/finanzas', ['ADMIN', 'FINANZAS', 'SUPER_ADMIN']],
+  ['/configuracion', ['ADMIN', 'SUPER_ADMIN']],
+  ['/api/configuracion-taller', ['ADMIN', 'SUPER_ADMIN']],
+  ['/api/cuentas-correo', ['ADMIN', 'SUPER_ADMIN']],
+];
+
 export default withAuth(
   function middleware(req) {
+    const { pathname } = req.nextUrl;
+    const token = req.nextauth.token as any;
+    const role: string = token?.role ?? '';
+
+    for (const [prefix, allowed] of ROLE_ROUTES) {
+      if (pathname.startsWith(prefix) && !allowed.includes(role)) {
+        if (pathname.startsWith('/api/')) {
+          return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+        }
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+      }
+    }
+
     return NextResponse.next();
   },
   {
     callbacks: {
-      // M5: rechazar sesión si el usuario fue desactivado en DB
       authorized: ({ token }) => !!token && (token as any).error !== 'USER_INACTIVE',
     },
   }

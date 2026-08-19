@@ -29,9 +29,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       <main className="flex-1 overflow-y-auto" data-main-content>
         {sinTaller && (
-          <div className="print:hidden bg-destructive/10 border-b border-destructive/30 px-4 md:px-6 py-2 flex items-center gap-2 text-destructive text-sm font-medium">
+          <div className="print:hidden bg-amber-500/10 border-b border-amber-500/20 px-4 md:px-6 py-2 flex items-center gap-2 text-amber-600 dark:text-amber-400 text-sm font-medium">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            Tu cuenta no tiene un taller asignado. El Super Admin debe vincularte a un taller desde el Panel Admin para que puedas operar el sistema.
+            Tu cuenta no tiene un taller asignado. Contacta al Super Admin para que te vincule desde el Panel Admin.
           </div>
         )}
         <div className="print:hidden flex items-center justify-end px-4 md:px-6 pt-4 pb-0">
