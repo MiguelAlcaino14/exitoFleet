@@ -46,7 +46,8 @@ export default function LoginPage() {
       <div className="absolute top-4 right-4"><ThemeToggleButton /></div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Image src="/logo.png" alt="D Motor" width={180} height={54} className="object-contain mx-auto mb-2 dark:invert" priority />
+          <Image src="/logo.png" alt="D Motor" width={180} height={54} className="object-contain mx-auto mb-2 dark:hidden" priority />
+          <Image src="/logo-dark.png" alt="D Motor" width={180} height={54} className="object-contain mx-auto mb-2 hidden dark:block" priority />
         </div>
         <div className="bg-card border border-border rounded-xl p-8">
           <h2 className="text-xl font-semibold text-foreground mb-6">Iniciar Sesión</h2>
