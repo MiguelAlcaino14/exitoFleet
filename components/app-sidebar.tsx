@@ -56,8 +56,10 @@ export function AppSidebar({ user }: SidebarProps) {
         <div className="p-5 border-b border-border">
           <div className="flex items-center gap-3">
             {!collapsed ? (
-              <Image src="/logo.png" alt="D Motor" width={120} height={36} className="object-contain dark:hidden" priority />
-              <Image src="/logo-dark.png" alt="D Motor" width={120} height={36} className="object-contain hidden dark:block" priority />
+              <>
+                <Image src="/logo.png" alt="D Motor" width={120} height={36} className="object-contain dark:hidden" priority />
+                <Image src="/logo-dark.png" alt="D Motor" width={120} height={36} className="object-contain hidden dark:block" priority />
+              </>
             ) : (
               <Image src="/favicon.png" alt="D Motor" width={36} height={36} className="object-contain" priority />
             )}
