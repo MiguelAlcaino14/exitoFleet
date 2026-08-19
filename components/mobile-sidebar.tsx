@@ -59,8 +59,8 @@ export function MobileSidebar({ user }: MobileSidebarProps) {
           <div className="fixed left-0 top-0 bottom-0 z-50 w-[260px] bg-card border-r border-border flex flex-col md:hidden">
             {/* Header */}
             <div className="p-5 border-b border-border flex items-center justify-between">
-              <Image src="/logo.png" alt="D Motor" width={120} height={36} className="object-contain dark:hidden" priority />
-              <Image src="/logo-dark.png" alt="D Motor" width={120} height={36} className="object-contain hidden dark:block" priority />
+              <Image src="/logo.png" alt="D Motor" width={0} height={0} sizes="160px" style={{ width: 'auto', height: 'auto', maxWidth: '140px', maxHeight: '48px' }} className="object-contain dark:hidden" priority />
+              <Image src="/logo-dark.png" alt="D Motor" width={0} height={0} sizes="160px" style={{ width: 'auto', height: 'auto', maxWidth: '140px', maxHeight: '48px' }} className="object-contain hidden dark:block" priority />
               <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="w-5 h-5" />
               </button>
