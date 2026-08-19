@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 const MAX_INTENTOS_LOGIN = 10;
-const REVALIDAR_CADA_SEGUNDOS = 3600; // 1 hora
+const REVALIDAR_CADA_SEGUNDOS = 300; // 5 minutos
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),

@@ -107,8 +107,10 @@ export function FinanzasClient() {
                     <span className="text-[10px] font-extrabold tracking-widest text-muted-foreground">{kpi.title}</span>
                     <Icon className="w-4 h-4" style={{ color: kpi.color }} />
                   </div>
-                  <div className="text-[26px] font-black text-foreground">{loading ? '...' : kpi.isMargin ? '—' : formatCLP(kpi.value)}</div>
-                  <div className="text-muted-foreground text-[11px] mt-1">{loading ? '' : kpi.sub}</div>
+                  <div className="text-[26px] font-black text-foreground">
+                    {loading ? <div className="h-7 w-28 bg-muted animate-pulse rounded mt-1" /> : kpi.isMargin ? '—' : formatCLP(kpi.value)}
+                  </div>
+                  <div className="text-muted-foreground text-[11px] mt-1">{loading ? <div className="h-3 w-16 bg-muted animate-pulse rounded mt-1" /> : kpi.sub}</div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -187,7 +189,11 @@ export function FinanzasClient() {
               </tr>
             </thead>
             <tbody>
-              {porFacturar.length > 0 ? porFacturar.map((ot: any) => (
+              {loading ? [1,2,3].map(i => (
+                <tr key={i} className="border-t border-border">
+                  {[1,2,3,4].map(j => <td key={j} className="px-5 py-3"><div className="h-4 bg-muted animate-pulse rounded" /></td>)}
+                </tr>
+              )) : porFacturar.length > 0 ? porFacturar.map((ot: any) => (
                 <tr key={ot.id} className="border-t border-border hover:bg-secondary/10 transition cursor-pointer" onClick={() => window.location.href = `/ot/${ot.id}`}>
                   <td className="px-5 py-3 text-sm font-mono font-bold text-foreground">#{String(ot.otNumero).padStart(4, '0')}</td>
                   <td className="px-5 py-3 text-sm font-bold text-foreground">{ot.vehiculo?.patente}</td>
@@ -221,7 +227,11 @@ export function FinanzasClient() {
               </tr>
             </thead>
             <tbody>
-              {(data?.resumenMensual ?? []).length > 0 ? (data?.resumenMensual ?? []).map((m: any) => {
+              {loading ? [1,2,3].map(i => (
+                <tr key={i} className="border-t border-border">
+                  {[1,2,3,4,5].map(j => <td key={j} className="px-5 py-3"><div className="h-4 bg-muted animate-pulse rounded" /></td>)}
+                </tr>
+              )) : (data?.resumenMensual ?? []).length > 0 ? (data?.resumenMensual ?? []).map((m: any) => {
                 const [y, mo] = m.periodo.split('-');
                 return (
                   <tr key={m.periodo} className="border-t border-border">

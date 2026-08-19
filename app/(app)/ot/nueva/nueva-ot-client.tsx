@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { validarRut, validarTelefono, validarEmail, formatRutInput, validarPatente, formatPatenteInput } from '@/lib/validaciones';
-import { useRouter } from 'next/navigation';
-import { Search, Truck, User, Fuel, Camera, CheckCircle, Plus, ArrowLeft, Loader2 } from 'lucide-react';
+import { Search, Truck, User, CheckCircle, Plus, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,9 +21,33 @@ const COMBUSTIBLES = [
   { val: 'F', label: 'F', color: '#22c55e' },
 ];
 
+const STEP_LABELS = ['Vehículo y Cliente', 'Datos de Ingreso', 'Checklist'];
+
+function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
+  return (
+    <div className="flex items-center gap-2 mb-6">
+      {[1, 2, 3].map((s) => (
+        <div key={s} className="flex items-center gap-2">
+          <div
+            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+              step >= s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+            }`}
+          >
+            {s}
+          </div>
+          {s < 3 && (
+            <div className={`h-0.5 w-8 ${step > s ? 'bg-primary' : 'bg-muted'}`} />
+          )}
+        </div>
+      ))}
+      <span className="ml-2 text-xs text-muted-foreground">{STEP_LABELS[step - 1]}</span>
+    </div>
+  );
+}
+
 export function NuevaOTClient() {
-  const router = useRouter();
-  const [step, setStep] = useState<'buscar' | 'formulario' | 'exito'>('buscar');
+  const [screen, setScreen] = useState<'buscar' | 'formulario' | 'exito'>('buscar');
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [patente, setPatente] = useState('');
   const [buscando, setBuscando] = useState(false);
   const [vehiculo, setVehiculo] = useState<any>(null);
@@ -58,12 +81,12 @@ export function NuevaOTClient() {
     estadoCarroceria: '', nivelAceite: '', nivelLiquidoFrenos: '', observaciones: '',
   });
 
+  const [submitting, setSubmitting] = useState(false);
+  const [otCreada, setOtCreada] = useState<any>(null);
+
   useEffect(() => {
     fetch('/api/mecanicos?activos=1').then(r => r.json()).then(d => setMecanicos(d ?? [])).catch(() => {});
   }, []);
-
-  const [submitting, setSubmitting] = useState(false);
-  const [otCreada, setOtCreada] = useState<any>(null);
 
   const buscarPatente = async () => {
     if (!patente.trim()) { toast.error('Ingresa una patente'); return; }
@@ -75,22 +98,54 @@ export function NuevaOTClient() {
       if (data?.found) {
         setVehiculo(data.vehiculo);
         setEsNuevo(false);
+        setWizardStep(2); // vehículo existente → saltar paso 1
       } else {
         setVehiculo(null);
         setEsNuevo(true);
+        setWizardStep(1); // nuevo vehículo → mostrar paso 1
       }
-      setStep('formulario');
+      setScreen('formulario');
     } catch {
       toast.error('Error al buscar vehículo');
     }
     setBuscando(false);
   };
 
+  const validateStep = (s: 1 | 2 | 3): boolean => {
+    if (s === 1 && esNuevo) {
+      if (!nvMarca.trim()) { toast.error('La marca del vehículo es requerida'); return false; }
+      if (!nvModelo.trim()) { toast.error('El modelo del vehículo es requerido'); return false; }
+      if (!nvAnio.trim()) { toast.error('El año del vehículo es requerido'); return false; }
+      if (!ncRazonSocial.trim()) { toast.error('La razón social del cliente es requerida'); return false; }
+    }
+    if (s === 2) {
+      if (!motivo.trim()) { toast.error('El motivo de ingreso es requerido'); return false; }
+      if (conductorTelefono.trim() && !validarTelefono(conductorTelefono)) {
+        toast.error('Teléfono del conductor inválido — solo dígitos');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleNext = () => {
+    if (!validateStep(wizardStep)) return;
+    setWizardStep((prev) => (prev < 3 ? ((prev + 1) as 1 | 2 | 3) : prev));
+  };
+
+  const handleBack = () => {
+    // Step 1 (new vehicle) or step 2 with existing vehicle → back to search
+    if (wizardStep === 1 || (wizardStep === 2 && !esNuevo)) {
+      setScreen('buscar');
+      setVehiculo(null);
+      setEsNuevo(false);
+      return;
+    }
+    setWizardStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3) : prev));
+  };
+
   const crearOT = async () => {
-    if (!motivo.trim()) { toast.error('El motivo de ingreso es requerido'); return; }
-    if (conductorTelefono.trim() && !validarTelefono(conductorTelefono)) { toast.error('Teléfono del conductor inválido — solo dígitos'); return; }
     if (esNuevo) {
-      if (!ncRazonSocial.trim()) { toast.error('La razón social del cliente es requerida'); return; }
       if (ncRut.trim() && !validarRut(ncRut)) { toast.error('RUT del cliente inválido — formato: 12.345.678-9'); return; }
       if (ncEmail.trim() && !validarEmail(ncEmail)) { toast.error('Email del cliente inválido'); return; }
       if (ncTelefono.trim() && !validarTelefono(ncTelefono)) { toast.error('Teléfono del cliente inválido — solo dígitos'); return; }
@@ -132,7 +187,7 @@ export function NuevaOTClient() {
       if (res.ok) {
         const data = await res.json();
         setOtCreada(data);
-        setStep('exito');
+        setScreen('exito');
         toast.success('¡OT creada exitosamente!');
       } else {
         const err = await res.json();
@@ -145,7 +200,7 @@ export function NuevaOTClient() {
   };
 
   // Success screen
-  if (step === 'exito' && otCreada) {
+  if (screen === 'exito' && otCreada) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-md">
@@ -163,7 +218,19 @@ export function NuevaOTClient() {
             <Link href={`/ot/${otCreada?.id}`}>
               <Button>Ver Detalle</Button>
             </Link>
-            <Button variant="outline" onClick={() => { setStep('buscar'); setPatente(''); setVehiculo(null); setEsNuevo(false); setMotivo(''); setKm(''); setCombustible(''); setObservaciones(''); setConductorNombre(''); setConductorTelefono(''); }}>
+            <Button variant="outline" onClick={() => {
+              setScreen('buscar');
+              setPatente('');
+              setVehiculo(null);
+              setEsNuevo(false);
+              setMotivo('');
+              setKm('');
+              setCombustible('');
+              setObservaciones('');
+              setConductorNombre('');
+              setConductorTelefono('');
+              setWizardStep(1);
+            }}>
               <Plus className="w-4 h-4 mr-2" /> Nueva OT
             </Button>
           </div>
@@ -186,7 +253,8 @@ export function NuevaOTClient() {
       </div>
 
       <AnimatePresence mode="wait">
-        {step === 'buscar' && (
+        {/* ── PANTALLA: Búsqueda de patente ── */}
+        {screen === 'buscar' && (
           <motion.div key="buscar" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <Card>
               <CardHeader>
@@ -213,145 +281,183 @@ export function NuevaOTClient() {
           </motion.div>
         )}
 
-        {step === 'formulario' && (
-          <motion.div key="form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
+        {/* ── PANTALLA: Wizard de formulario ── */}
+        {screen === 'formulario' && (
+          <motion.div key="formulario" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
 
-            {/* Vehicle info */}
-            {vehiculo ? (
-              <Card className="border-primary/30">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Truck className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <div className="text-lg font-bold text-foreground font-mono">{vehiculo?.patente}</div>
-                      <div className="text-sm text-muted-foreground">{vehiculo?.marca} {vehiculo?.modelo} {vehiculo?.anio ? `(${vehiculo.anio})` : ''}</div>
-                    </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    <User className="w-3.5 h-3.5 inline mr-1" /> {vehiculo?.cliente?.razonSocial}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : esNuevo ? (
-              <Card>
-                <CardHeader><CardTitle className="text-base">Nuevo Vehículo: {patente}</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Marca</Label><Input className="mt-1" value={nvMarca} onChange={(e: any) => setNvMarca(e.target.value)} placeholder="Volvo, Scania..." /></div>
-                    <div><Label>Modelo</Label><Input className="mt-1" value={nvModelo} onChange={(e: any) => setNvModelo(e.target.value)} placeholder="FH 540..." /></div>
-                    <div><Label>Año</Label><Input className="mt-1" value={nvAnio} onChange={(e: any) => setNvAnio(e.target.value)} placeholder="2024" type="number" /></div>
-                    <div><Label>Tipo</Label><Input className="mt-1" value={nvTipo} onChange={(e: any) => setNvTipo(e.target.value)} placeholder="Tracto Camión" /></div>
-                  </div>
-                  <div><Label>VIN</Label><Input className="mt-1" value={nvVin} onChange={(e: any) => setNvVin(e.target.value)} placeholder="Número de chasis" /></div>
+            <StepIndicator step={wizardStep} />
 
-                  <div className="border-t border-border pt-4 mt-4">
-                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><User className="w-4 h-4" /> Datos del Cliente</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div><Label>Razón Social *</Label><Input className="mt-1" value={ncRazonSocial} onChange={(e: any) => setNcRazonSocial(e.target.value)} placeholder="Empresa S.A." /></div>
-                      <div><Label>RUT Empresa</Label><Input className="mt-1" value={ncRut} onChange={(e: any) => setNcRut(formatRutInput(e.target.value))} placeholder="76.123.456-7" /></div>
-                      <div><Label>Email</Label><Input className="mt-1" value={ncEmail} onChange={(e: any) => setNcEmail(e.target.value)} placeholder="contacto@empresa.cl" type="email" /></div>
-                      <div><Label>Teléfono</Label><Input className="mt-1" value={ncTelefono} onChange={(e: any) => setNcTelefono(e.target.value)} placeholder="+569..." /></div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : null}
+            <AnimatePresence mode="wait">
+              {/* ── PASO 1: Vehículo y Cliente ── */}
+              {wizardStep === 1 && esNuevo && (
+                <motion.div key="step1" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-6">
+                  <Card>
+                    <CardHeader><CardTitle className="text-base">Nuevo Vehículo: {patente}</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div><Label>Marca *</Label><Input className="mt-1" value={nvMarca} onChange={(e: any) => setNvMarca(e.target.value)} placeholder="Volvo, Scania..." /></div>
+                        <div><Label>Modelo *</Label><Input className="mt-1" value={nvModelo} onChange={(e: any) => setNvModelo(e.target.value)} placeholder="FH 540..." /></div>
+                        <div><Label>Año *</Label><Input className="mt-1" value={nvAnio} onChange={(e: any) => setNvAnio(e.target.value)} placeholder="2024" type="number" /></div>
+                        <div><Label>Tipo</Label><Input className="mt-1" value={nvTipo} onChange={(e: any) => setNvTipo(e.target.value)} placeholder="Tracto Camión" /></div>
+                      </div>
+                      <div><Label>VIN</Label><Input className="mt-1" value={nvVin} onChange={(e: any) => setNvVin(e.target.value)} placeholder="Número de chasis" /></div>
 
-            {/* Main form */}
-            <Card>
-              <CardHeader><CardTitle className="text-base">Datos de Ingreso</CardTitle></CardHeader>
-              <CardContent className="space-y-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Kilometraje</Label>
-                    <Input className="mt-1 font-mono" value={km} onChange={(e: any) => setKm(e.target.value)} placeholder="Ej: 54000" type="number" />
-                  </div>
-                  <div>
-                    <Label>Nivel Combustible</Label>
-                    <div className="flex gap-2 mt-1">
-                      {COMBUSTIBLES.map((c) => (
-                        <button
-                          key={c.val}
-                          type="button"
-                          onClick={() => setCombustible(c.val)}
-                          className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all border ${
-                            combustible === c.val
-                              ? 'text-white shadow-lg scale-105'
-                              : 'bg-muted text-muted-foreground border-border hover:bg-secondary'
-                          }`}
-                          style={combustible === c.val ? { backgroundColor: c.color, borderColor: c.color } : {}}
-                        >
-                          {c.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                      <div className="border-t border-border pt-4 mt-4">
+                        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><User className="w-4 h-4" /> Datos del Cliente</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div><Label>Razón Social *</Label><Input className="mt-1" value={ncRazonSocial} onChange={(e: any) => setNcRazonSocial(e.target.value)} placeholder="Empresa S.A." /></div>
+                          <div><Label>RUT Empresa</Label><Input className="mt-1" value={ncRut} onChange={(e: any) => setNcRut(formatRutInput(e.target.value))} placeholder="76.123.456-7" /></div>
+                          <div><Label>Email</Label><Input className="mt-1" value={ncEmail} onChange={(e: any) => setNcEmail(e.target.value)} placeholder="contacto@empresa.cl" type="email" /></div>
+                          <div><Label>Teléfono</Label><Input className="mt-1" value={ncTelefono} onChange={(e: any) => setNcTelefono(e.target.value)} placeholder="+569..." /></div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
-                <div>
-                  <Label>Motivo de Ingreso *</Label>
-                  <Textarea className="mt-1" rows={3} value={motivo} onChange={(e: any) => setMotivo(e.target.value)} placeholder="Describa el motivo del ingreso al taller..." />
-                </div>
+              {/* ── PASO 2: Datos de Ingreso ── */}
+              {wizardStep === 2 && (
+                <motion.div key="step2" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-6">
+                  {/* Card resumen vehículo existente */}
+                  {vehiculo && (
+                    <Card className="border-primary/30">
+                      <CardContent className="p-5">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <Truck className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <div className="text-lg font-bold text-foreground font-mono">{vehiculo?.patente}</div>
+                            <div className="text-sm text-muted-foreground">{vehiculo?.marca} {vehiculo?.modelo} {vehiculo?.anio ? `(${vehiculo.anio})` : ''}</div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <User className="w-3.5 h-3.5 inline mr-1" /> {vehiculo?.cliente?.razonSocial}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Nombre Conductor</Label><Input className="mt-1" value={conductorNombre} onChange={(e: any) => setConductorNombre(e.target.value)} /></div>
-                  <div><Label>Teléfono Conductor</Label><Input className="mt-1" value={conductorTelefono} onChange={(e: any) => setConductorTelefono(e.target.value)} /></div>
-                </div>
+                  <Card>
+                    <CardHeader><CardTitle className="text-base">Datos de Ingreso</CardTitle></CardHeader>
+                    <CardContent className="space-y-5">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Kilometraje</Label>
+                          <Input className="mt-1 font-mono" value={km} onChange={(e: any) => setKm(e.target.value)} placeholder="Ej: 54000" type="number" />
+                        </div>
+                        <div>
+                          <Label>Nivel Combustible</Label>
+                          <div className="flex gap-2 mt-1">
+                            {COMBUSTIBLES.map((c) => (
+                              <button
+                                key={c.val}
+                                type="button"
+                                onClick={() => setCombustible(c.val)}
+                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all border ${
+                                  combustible === c.val
+                                    ? 'text-white shadow-lg scale-105'
+                                    : 'bg-muted text-muted-foreground border-border hover:bg-secondary'
+                                }`}
+                                style={combustible === c.val ? { backgroundColor: c.color, borderColor: c.color } : {}}
+                              >
+                                {c.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
 
-                <div>
-                  <Label>Mecánico Responsable</Label>
-                  <select value={mecanicoId} onChange={(e: any) => setMecanicoId(e.target.value)}
-                    className="w-full mt-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
-                    <option value="">— Sin asignar —</option>
-                    {mecanicos.map((m: any) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-                  </select>
-                </div>
+                      <div>
+                        <Label>Motivo de Ingreso *</Label>
+                        <Textarea className="mt-1" rows={3} value={motivo} onChange={(e: any) => setMotivo(e.target.value)} placeholder="Describa el motivo del ingreso al taller..." />
+                      </div>
 
-                <div>
-                  <Label>Observaciones</Label>
-                  <Textarea className="mt-1" rows={2} value={observaciones} onChange={(e: any) => setObservaciones(e.target.value)} placeholder="Observaciones adicionales..." />
-                </div>
-              </CardContent>
-            </Card>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div><Label>Nombre Conductor</Label><Input className="mt-1" value={conductorNombre} onChange={(e: any) => setConductorNombre(e.target.value)} /></div>
+                        <div><Label>Teléfono Conductor</Label><Input className="mt-1" value={conductorTelefono} onChange={(e: any) => setConductorTelefono(e.target.value)} /></div>
+                      </div>
 
-            {/* Checklist */}
-            <Card>
-              <CardHeader><CardTitle className="text-base">Checklist de Recepción</CardTitle></CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {[
-                    { key: 'gato', label: 'Gato' },
-                    { key: 'llaveRuedas', label: 'Llave Ruedas' },
-                    { key: 'ruedaRepuesto', label: 'Rueda Repuesto' },
-                    { key: 'triangulos', label: 'Triángulos' },
-                    { key: 'extintor', label: 'Extintor' },
-                    { key: 'botiquin', label: 'Botiquín' },
-                    { key: 'documentos', label: 'Documentos' },
-                  ].map((item) => (
-                    <div key={item.key} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={(checklist as any)?.[item.key] ?? false}
-                        onCheckedChange={(v: any) => setChecklist((prev) => ({ ...(prev ?? {}), [item.key]: !!v }))}
-                      />
-                      <Label className="text-sm cursor-pointer">{item.label}</Label>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4">
-                  <Label>Estado Carrocería</Label>
-                  <Input className="mt-1" value={checklist?.estadoCarroceria ?? ''} onChange={(e: any) => setChecklist((p) => ({ ...(p ?? {}), estadoCarroceria: e.target.value }))} placeholder="Buen estado / Golpe lateral izq..." />
-                </div>
-              </CardContent>
-            </Card>
+                      <div>
+                        <Label>Mecánico Responsable</Label>
+                        <select value={mecanicoId} onChange={(e: any) => setMecanicoId(e.target.value)}
+                          className="w-full mt-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+                          <option value="">— Sin asignar —</option>
+                          {mecanicos.map((m: any) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                        </select>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
-            {/* Actions */}
-            <div className="flex gap-3 justify-end">
-              <Button variant="outline" onClick={() => { setStep('buscar'); setVehiculo(null); setEsNuevo(false); }}>Cancelar</Button>
-              <Button onClick={crearOT} disabled={submitting} loading={submitting}>
-                <Plus className="w-4 h-4 mr-2" /> Crear Orden de Trabajo
+              {/* ── PASO 3: Checklist ── */}
+              {wizardStep === 3 && (
+                <motion.div key="step3" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-6">
+                  <Card>
+                    <CardHeader><CardTitle className="text-base">Checklist de Recepción</CardTitle></CardHeader>
+                    <CardContent className="space-y-5">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {[
+                          { key: 'gato', label: 'Gato' },
+                          { key: 'llaveRuedas', label: 'Llave Ruedas' },
+                          { key: 'ruedaRepuesto', label: 'Rueda Repuesto' },
+                          { key: 'triangulos', label: 'Triángulos' },
+                          { key: 'extintor', label: 'Extintor' },
+                          { key: 'botiquin', label: 'Botiquín' },
+                          { key: 'documentos', label: 'Documentos' },
+                        ].map((item) => (
+                          <div key={item.key} className="flex items-center gap-2">
+                            <Checkbox
+                              checked={(checklist as any)?.[item.key] ?? false}
+                              onCheckedChange={(v: any) => setChecklist((prev) => ({ ...(prev ?? {}), [item.key]: !!v }))}
+                            />
+                            <Label className="text-sm cursor-pointer">{item.label}</Label>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div>
+                        <Label>Estado Carrocería</Label>
+                        <Input className="mt-1" value={checklist?.estadoCarroceria ?? ''} onChange={(e: any) => setChecklist((p) => ({ ...(p ?? {}), estadoCarroceria: e.target.value }))} placeholder="Buen estado / Golpe lateral izq..." />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Nivel Aceite</Label>
+                          <Input className="mt-1" value={checklist?.nivelAceite ?? ''} onChange={(e: any) => setChecklist((p) => ({ ...(p ?? {}), nivelAceite: e.target.value }))} placeholder="Normal / Bajo..." />
+                        </div>
+                        <div>
+                          <Label>Nivel Líquido Frenos</Label>
+                          <Input className="mt-1" value={checklist?.nivelLiquidoFrenos ?? ''} onChange={(e: any) => setChecklist((p) => ({ ...(p ?? {}), nivelLiquidoFrenos: e.target.value }))} placeholder="Normal / Bajo..." />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label>Observaciones del Checklist</Label>
+                        <Textarea className="mt-1" rows={3} value={checklist?.observaciones ?? ''} onChange={(e: any) => setChecklist((p) => ({ ...(p ?? {}), observaciones: e.target.value }))} placeholder="Observaciones de la recepción..." />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* ── Botones de navegación ── */}
+            <div className="flex gap-3 justify-between">
+              <Button variant="outline" onClick={handleBack}>
+                ← Atrás
               </Button>
+              {wizardStep < 3 ? (
+                <Button onClick={handleNext}>
+                  Siguiente →
+                </Button>
+              ) : (
+                <Button onClick={crearOT} disabled={submitting} loading={submitting}>
+                  <Plus className="w-4 h-4 mr-2" /> Crear Orden de Trabajo
+                </Button>
+              )}
             </div>
           </motion.div>
         )}

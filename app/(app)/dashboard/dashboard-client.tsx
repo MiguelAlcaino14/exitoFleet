@@ -85,7 +85,7 @@ export function DashboardClient() {
                 <CardContent className="p-5">
                   <div className="text-[10px] font-extrabold tracking-widest text-muted-foreground mb-3">{kpi.title}</div>
                   <div className="text-[28px] font-black text-foreground leading-none">
-                    {loading ? '...' : <AnimatedNumber value={kpi.value} prefix={kpi.prefix ?? ''} />}
+                    {loading ? <div className="h-8 w-24 bg-muted animate-pulse rounded mt-1" /> : <AnimatedNumber value={kpi.value} prefix={kpi.prefix ?? ''} />}
                   </div>
                   <div className="text-muted-foreground text-[11px] mt-1.5">{kpi.sub}</div>
                 </CardContent>
@@ -151,7 +151,11 @@ export function DashboardClient() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(ultimasOTs ?? []).length > 0 ? (ultimasOTs ?? []).map((row: any, idx: number) => {
+                  {loading ? [1,2,3,4,5].map(i => (
+                    <tr key={i} className="border-t border-border">
+                      {[1,2,3,4,5].map(j => <td key={j} className="px-5 py-3.5"><div className="h-4 bg-muted animate-pulse rounded" /></td>)}
+                    </tr>
+                  )) : (ultimasOTs ?? []).length > 0 ? (ultimasOTs ?? []).map((row: any, idx: number) => {
                     const estadoColor = {
                       POR_DIAGNOSTICAR: '#6366f1', EN_COTIZACION: '#f97316',
                       ESPERANDO_APROBACION: '#eab308', EN_TRABAJO: '#22c55e',
@@ -207,7 +211,7 @@ export function DashboardClient() {
                     <div className={`w-2.5 h-2.5 rounded-full ${s.color}`} />
                     <span className="text-sm text-foreground">{s.label}</span>
                   </div>
-                  <span className="text-sm font-mono font-bold text-foreground">{loading ? '...' : s.count}</span>
+                  {loading ? <div className="h-4 w-6 bg-muted animate-pulse rounded" /> : <span className="text-sm font-mono font-bold text-foreground">{s.count}</span>}
                 </div>
               ))}
               <div className="pt-3 border-t border-border">
@@ -215,7 +219,7 @@ export function DashboardClient() {
                   <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-primary" /> OTs Activas
                   </span>
-                  <span className="text-lg font-mono font-bold text-primary">{loading ? '...' : data?.totalOTsActivas ?? 0}</span>
+                  {loading ? <div className="h-5 w-8 bg-muted animate-pulse rounded" /> : <span className="text-lg font-mono font-bold text-primary">{data?.totalOTsActivas ?? 0}</span>}
                 </div>
               </div>
             </CardContent>

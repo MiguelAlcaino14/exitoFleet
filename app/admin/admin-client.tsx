@@ -7,6 +7,9 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Building2, Plus, Pencil, Save, X, Users, Truck, FileText, Search, LogOut, Loader2, ShieldCheck, Palette, ArrowLeft, Upload, Wrench, Mail, Phone, MapPin, Calendar, ImageIcon } from 'lucide-react';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
+import { GlobalSearch } from '@/components/global-search';
+import { NotificationsBell } from '@/components/notifications-bell';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -292,6 +295,8 @@ export default function AdminClient() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground hidden sm:inline">{(session?.user as any)?.email}</span>
+            <GlobalSearch />
+            <NotificationsBell />
             <ThemeToggleButton />
             <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: '/auth/login' })} className="text-muted-foreground">
               <LogOut className="w-4 h-4 mr-1" /> Salir
@@ -363,8 +368,20 @@ export default function AdminClient() {
                           </div>
                           <div className="flex items-center gap-1 mt-2">
                             <Palette className="w-3 h-3 text-muted-foreground" />
-                            <div className="w-4 h-4 rounded-full border border-border" style={{ backgroundColor: t.colorPrimario }} title={`Primario: ${t.colorPrimario}`} />
-                            <div className="w-4 h-4 rounded-full border border-border" style={{ backgroundColor: t.colorFondo }} title={`Fondo: ${t.colorFondo}`} />
+                            <TooltipProvider delayDuration={0}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="w-4 h-4 rounded-full border border-border cursor-help" style={{ backgroundColor: t.colorPrimario }} />
+                                </TooltipTrigger>
+                                <TooltipContent>Primario: {t.colorPrimario}</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="w-4 h-4 rounded-full border border-border cursor-help" style={{ backgroundColor: t.colorFondo }} />
+                                </TooltipTrigger>
+                                <TooltipContent>Fondo: {t.colorFondo}</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                         <div className="flex gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
