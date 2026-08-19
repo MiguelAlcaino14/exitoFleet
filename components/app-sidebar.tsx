@@ -50,20 +50,18 @@ export function AppSidebar({ user }: SidebarProps) {
     <TooltipProvider delayDuration={0}>
       <div className={cn(
         'flex flex-col border-r border-border bg-card transition-all duration-300 relative h-screen',
-        collapsed ? 'w-[72px]' : 'w-[220px]'
+        collapsed ? 'w-[72px]' : 'w-[240px]'
       )}>
         {/* Logo */}
-        <div className="p-5 border-b border-border">
-          <div className="flex items-center gap-3">
-            {!collapsed ? (
-              <>
-                <Image src="/logo.png" alt="D Motor" width={0} height={0} sizes="180px" style={{ width: 'auto', height: 'auto', maxWidth: '160px', maxHeight: '52px' }} className="object-contain dark:hidden" priority />
-                <Image src="/logo-dark.png" alt="D Motor" width={0} height={0} sizes="180px" style={{ width: 'auto', height: 'auto', maxWidth: '160px', maxHeight: '52px' }} className="object-contain hidden dark:block" priority />
-              </>
-            ) : (
-              <Image src="/favicon.png" alt="D Motor" width={36} height={36} className="object-contain" priority />
-            )}
-          </div>
+        <div className="px-4 py-5 border-b border-border flex items-center justify-start">
+          {!collapsed ? (
+            <>
+              <Image src="/logo.png" alt="D Motor" width={0} height={0} sizes="120px" style={{ width: 'auto', height: 'auto', maxWidth: '120px' }} className="object-contain dark:hidden" priority />
+              <Image src="/logo-dark.png" alt="D Motor" width={0} height={0} sizes="120px" style={{ width: 'auto', height: 'auto', maxWidth: '120px' }} className="object-contain hidden dark:block" priority />
+            </>
+          ) : (
+            <Image src="/favicon.png" alt="D Motor" width={40} height={40} className="object-contain" priority />
+          )}
         </div>
 
         {/* Toggle */}

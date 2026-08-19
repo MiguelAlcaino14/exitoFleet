@@ -18,9 +18,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = session.user as any;
   const sinTaller = !user?.tallerId && user?.role !== 'SUPER_ADMIN';
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar */}
-      <div data-sidebar className="print:hidden hidden md:block">
+      <div data-sidebar className="print:hidden hidden md:flex flex-shrink-0">
         <AppSidebar user={user} />
       </div>
       {/* Mobile sidebar */}
