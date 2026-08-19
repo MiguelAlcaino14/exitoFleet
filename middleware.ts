@@ -9,6 +9,12 @@ const ROLE_ROUTES: [string, string[]][] = [
   ['/configuracion', ['ADMIN', 'SUPER_ADMIN']],
   ['/api/configuracion-taller', ['ADMIN', 'SUPER_ADMIN']],
   ['/api/cuentas-correo', ['ADMIN', 'SUPER_ADMIN']],
+  ['/kanban', ['ADMIN', 'JEFE_TALLER', 'RECEPCION', 'SUPER_ADMIN']],
+  ['/vehiculos', ['ADMIN', 'JEFE_TALLER', 'RECEPCION', 'SUPER_ADMIN']],
+  ['/api/vehiculos', ['ADMIN', 'JEFE_TALLER', 'RECEPCION', 'SUPER_ADMIN']],
+  ['/clientes', ['ADMIN', 'JEFE_TALLER', 'RECEPCION', 'FINANZAS', 'SUPER_ADMIN']],
+  ['/api/clientes', ['ADMIN', 'JEFE_TALLER', 'RECEPCION', 'FINANZAS', 'SUPER_ADMIN']],
+  ['/historial', ['ADMIN', 'JEFE_TALLER', 'RECEPCION', 'FINANZAS', 'SUPER_ADMIN']],
 ];
 
 export default withAuth(
