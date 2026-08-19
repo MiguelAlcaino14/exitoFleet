@@ -56,7 +56,7 @@ export function DashboardClient() {
   ];
 
   return (
-    <div className="p-6 lg:p-10 max-w-[1200px]">
+    <div className="p-6 lg:p-10 max-w-[1600px]">
       {/* Header */}
       <div className="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-end">
         <div>

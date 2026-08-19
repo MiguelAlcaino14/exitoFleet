@@ -91,7 +91,7 @@ export function ClientesClient() {
   };
 
   return (
-    <div className="p-6 lg:p-10 max-w-[1200px]">
+    <div className="p-6 lg:p-10 max-w-[1600px]">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight font-display">Clientes</h1>

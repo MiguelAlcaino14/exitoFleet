@@ -11,7 +11,12 @@ export async function GET() {
 
   try {
     const users = await prisma.user.findMany({
-      where: { ...tallerWhere(scope), rol: { not: 'SUPER_ADMIN' } },
+      where: {
+        AND: [
+          { OR: [tallerWhere(scope), { id: scope.userId }] },
+          { rol: { not: 'SUPER_ADMIN' } },
+        ],
+      },
       select: { id: true, email: true, nombre: true, rol: true, activo: true, createdAt: true },
       orderBy: { createdAt: 'asc' },
     });

@@ -122,7 +122,7 @@ export default function AdminClient() {
   }, [talleres, filtro]);
 
   const nuevoTallerForm = {
-    nombre: '', slug: '', razonSocial: '', rut: '', direccion: '', telefono: '', celular: '', email: '', division: '', logoUrl: '', colorPrimario: '#2563eb', colorFondo: '#121212',
+    nombre: '', slug: '', razonSocial: '', rut: '', direccion: '', telefono: '', celular: '', email: '', division: '', logoUrl: '', colorPrimario: '#2563eb', colorFondo: '#ffffff',
   };
 
   const startEdit = (t: any) => {

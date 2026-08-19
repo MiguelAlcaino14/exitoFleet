@@ -198,7 +198,7 @@ export function ConfiguracionClient() {
   ];
 
   return (
-    <div className="p-6 lg:p-10 max-w-[1000px]">
+    <div className="p-6 lg:p-10 max-w-[1600px]">
       <div className="mb-8">
         <h1 className="text-2xl lg:text-[32px] font-extrabold text-foreground tracking-tight">Configuración</h1>
         <p className="text-muted-foreground text-sm mt-2">Ajustes generales del sistema</p>

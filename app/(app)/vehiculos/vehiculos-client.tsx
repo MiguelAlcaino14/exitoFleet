@@ -140,7 +140,7 @@ export function VehiculosClient() {
   };
 
   return (
-    <div className="p-6 lg:p-10 max-w-[1400px]">
+    <div className="p-6 lg:p-10 max-w-[1600px]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
         <div>
