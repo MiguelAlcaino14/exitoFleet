@@ -5,7 +5,7 @@ import { validarRut, validarTelefono, validarEmail, formatRutInput, formatTelefo
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Building2, Plus, Pencil, Save, X, Users, Truck, FileText, Search, LogOut, Loader2, ShieldCheck, Palette, ArrowLeft, Upload, Wrench, Mail, Phone, MapPin, Calendar, ImageIcon, KeyRound } from 'lucide-react';
+import { Building2, Plus, Pencil, Save, X, Users, Truck, FileText, Search, LogOut, Loader2, Palette, ArrowLeft, Upload, Wrench, Mail, Phone, MapPin, Calendar, ImageIcon, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { GlobalSearch } from '@/components/global-search';
 import { NotificationsBell } from '@/components/notifications-bell';
@@ -103,6 +103,7 @@ export default function AdminClient() {
   const [euRol, setEuRol] = useState('ADMIN');
   const [euPassword, setEuPassword] = useState('');
   const [euSaving, setEuSaving] = useState(false);
+  const [nuShowPass, setNuShowPass] = useState(false);
 
   const fetchTalleres = async () => {
     try {
@@ -174,6 +175,7 @@ export default function AdminClient() {
     if (!nuEmail.trim() || !nuNombre.trim() || !nuPassword.trim()) {
       toast.error('Nombre, email y contraseña son requeridos'); return;
     }
+    if (!validarEmail(nuEmail.trim())) { toast.error('El email no es válido'); return; }
     if (nuPassword.length < 6) { toast.error('Contraseña mínimo 6 caracteres'); return; }
     setNuSaving(true);
     try {
@@ -318,9 +320,7 @@ export default function AdminClient() {
       <header className="bg-card border-b border-border px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[hsl(217,74%,45%)]/10 border border-[hsl(217,74%,45%)]/30 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-[hsl(217,74%,45%)]" />
-            </div>
+            <img src="/icon-dmotor.svg" alt="D Motor" className="w-10 h-10 object-contain dark:invert" />
             <div>
               <h1 className="font-extrabold text-lg tracking-tight">D Motor — Super Admin</h1>
               <p className="text-xs text-muted-foreground">Gestión de talleres y usuarios</p>
@@ -338,7 +338,8 @@ export default function AdminClient() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-6">
+      <main className="px-6 py-6">
+        <div className="max-w-6xl mx-auto">
         {/* Stats */}
         {tab !== 'detalle' && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -543,8 +544,16 @@ export default function AdminClient() {
                         <p className="text-[10px] font-black tracking-widest text-primary">CREAR USUARIO PARA ESTE TALLER</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <Input placeholder="Nombre completo" value={nuNombre} onChange={e => setNuNombre(e.target.value)} className="h-8 text-xs" />
-                          <Input placeholder="Email" type="email" value={nuEmail} onChange={e => setNuEmail(e.target.value)} className="h-8 text-xs" />
-                          <Input placeholder="Contraseña (mín. 6 caracteres)" type="password" value={nuPassword} onChange={e => setNuPassword(e.target.value)} className="h-8 text-xs" />
+                          <div>
+                            <Input placeholder="Email" type="email" value={nuEmail} onChange={e => setNuEmail(e.target.value)} className={`h-8 text-xs ${nuEmail && !validarEmail(nuEmail) ? 'border-red-500 focus-visible:ring-red-500' : ''}`} />
+                            {nuEmail && !validarEmail(nuEmail) && <p className="text-[10px] text-red-500 mt-0.5">Correo inválido</p>}
+                          </div>
+                          <div className="relative">
+                            <Input placeholder="Contraseña (mín. 6 caracteres)" type={nuShowPass ? 'text' : 'password'} value={nuPassword} onChange={e => setNuPassword(e.target.value)} className="h-8 text-xs pr-8 [&::-ms-reveal]:hidden [&::-webkit-credentials-auto-fill-button]:hidden" />
+                            <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setNuShowPass(v => !v)}>
+                              {nuShowPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
                           <select value={nuRol} onChange={e => setNuRol(e.target.value)} className="h-8 text-xs bg-background border border-border rounded-md px-2 text-foreground">
                             <option value="ADMIN">Administrador</option>
                             <option value="JEFE_TALLER">Jefe de Taller</option>
@@ -704,6 +713,7 @@ export default function AdminClient() {
             )}
           </div>
         )}
+        </div>
       </main>
     </div>
   );
