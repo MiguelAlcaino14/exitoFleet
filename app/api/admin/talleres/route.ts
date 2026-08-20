@@ -112,3 +112,21 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Error al actualizar taller' }, { status: 500 });
   }
 }
+
+// DELETE: eliminar taller (solo SUPER_ADMIN)
+export async function DELETE(req: NextRequest) {
+  const session = await requireSuperAdmin();
+  if (!session) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
+
+    await prisma.taller.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    console.error('Admin talleres DELETE error:', err);
+    return NextResponse.json({ error: 'Error al eliminar taller' }, { status: 500 });
+  }
+}

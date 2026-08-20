@@ -5,7 +5,7 @@ import { validarRut, validarTelefono, validarEmail, formatRutInput, formatTelefo
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Building2, Plus, Pencil, Save, X, Users, Truck, FileText, Search, LogOut, Loader2, ShieldCheck, Palette, ArrowLeft, Upload, Wrench, Mail, Phone, MapPin, Calendar, ImageIcon } from 'lucide-react';
+import { Building2, Plus, Pencil, Save, X, Users, Truck, FileText, Search, LogOut, Loader2, ShieldCheck, Palette, ArrowLeft, Upload, Wrench, Mail, Phone, MapPin, Calendar, ImageIcon, KeyRound } from 'lucide-react';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { GlobalSearch } from '@/components/global-search';
 import { NotificationsBell } from '@/components/notifications-bell';
@@ -75,9 +75,9 @@ function LogoUploader({ currentUrl, onUploaded }: { currentUrl: string; onUpload
 }
 
 const CAMPOS_TALLER = [
-  {l:'Nombre *',k:'nombre'},{l:'Slug (URL)',k:'slug'},{l:'Razón Social',k:'razonSocial'},
-  {l:'RUT',k:'rut'},{l:'Dirección',k:'direccion'},{l:'Teléfono',k:'telefono'},
-  {l:'Celular',k:'celular'},{l:'Email',k:'email'},{l:'División',k:'division'},
+  {l:'Nombre *',k:'nombre'},{l:'Slug (URL)',k:'slug'},{l:'Razón Social *',k:'razonSocial'},
+  {l:'RUT *',k:'rut'},{l:'Dirección *',k:'direccion'},{l:'Teléfono *',k:'telefono'},
+  {l:'Celular *',k:'celular'},{l:'Email *',k:'email'},{l:'División *',k:'division'},
 ];
 
 export default function AdminClient() {
@@ -132,10 +132,17 @@ export default function AdminClient() {
 
   const guardar = async (isNew = false) => {
     if (!form.nombre?.trim()) { toast.error('El nombre del taller es requerido'); return; }
-    if (form.rut?.trim() && !validarRut(form.rut)) { toast.error('RUT inválido — formato: 12.345.678-9'); return; }
-    if (form.telefono?.trim() && !validarTelefono(form.telefono)) { toast.error('Teléfono inválido — solo dígitos, 8-15 caracteres'); return; }
-    if (form.celular?.trim() && !validarTelefono(form.celular)) { toast.error('Celular inválido — solo dígitos, 8-15 caracteres'); return; }
-    if (form.email?.trim() && !validarEmail(form.email)) { toast.error('Email inválido'); return; }
+    if (!form.razonSocial?.trim()) { toast.error('La razón social es requerida'); return; }
+    if (!form.rut?.trim()) { toast.error('El RUT es requerido'); return; }
+    if (!form.direccion?.trim()) { toast.error('La dirección es requerida'); return; }
+    if (!form.telefono?.trim()) { toast.error('El teléfono es requerido'); return; }
+    if (!form.celular?.trim()) { toast.error('El celular es requerido'); return; }
+    if (!form.email?.trim()) { toast.error('El email es requerido'); return; }
+    if (!form.division?.trim()) { toast.error('La división es requerida'); return; }
+    if (!validarRut(form.rut)) { toast.error('RUT inválido — formato: 12.345.678-9'); return; }
+    if (!validarTelefono(form.telefono)) { toast.error('Teléfono inválido — solo dígitos, 8-15 caracteres'); return; }
+    if (!validarTelefono(form.celular)) { toast.error('Celular inválido — solo dígitos, 8-15 caracteres'); return; }
+    if (!validarEmail(form.email)) { toast.error('Email inválido'); return; }
     setSaving(true);
     try {
       const url = '/api/admin/talleres';
@@ -210,6 +217,32 @@ export default function AdminClient() {
     } catch { toast.error('Error'); } finally { setEuSaving(false); }
   };
 
+  const eliminarTaller = async (tallerId: string, nombre: string) => {
+    if (!confirm(`¿Eliminar definitivamente el taller "${nombre}"?\n\nEsta acción no se puede deshacer y eliminará todos sus datos.`)) return;
+    try {
+      const r = await fetch(`/api/admin/talleres?id=${tallerId}`, { method: 'DELETE' });
+      const j = await r.json();
+      if (!r.ok) { toast.error(j?.error || 'Error al eliminar taller'); return; }
+      toast.success(`Taller "${nombre}" eliminado`);
+      setTab('talleres');
+      setDetalle(null);
+      fetchTalleres();
+    } catch { toast.error('Error'); }
+  };
+
+  const enviarResetUsuario = async (email: string, nombre: string) => {
+    try {
+      await fetch('/api/auth/recuperar-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      toast.success(`Enlace de reset enviado a ${nombre}`);
+    } catch {
+      toast.error('Error al enviar el correo');
+    }
+  };
+
   const eliminarUsuario = async (userId: string, nombre: string, tallerId: string) => {
     if (!confirm(`¿Eliminar usuario "${nombre}"? Si tiene OTs asociadas, será desactivado en lugar de eliminado.`)) return;
     try {
@@ -270,7 +303,7 @@ export default function AdminClient() {
       </div>
       <LogoUploader currentUrl={form.logoUrl ?? ''} onUploaded={(url: string) => setForm({ ...form, logoUrl: url })} />
       <div className="flex gap-2">
-        <Button onClick={() => guardar(isNew)} disabled={saving || !form.nombre?.trim()} className="bg-[hsl(217,74%,45%)] hover:bg-[hsl(217,74%,45%)]/90 text-black">
+        <Button onClick={() => guardar(isNew)} disabled={saving || !form.nombre?.trim() || !form.razonSocial?.trim() || !form.rut?.trim() || !form.direccion?.trim() || !form.telefono?.trim() || !form.celular?.trim() || !form.email?.trim() || !form.division?.trim()} className="bg-[hsl(217,74%,45%)] hover:bg-[hsl(217,74%,45%)]/90 text-white">
           {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : isNew ? <Plus className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
           {saving ? 'Guardando...' : isNew ? 'Crear Taller' : 'Guardar Cambios'}
         </Button>
@@ -391,6 +424,9 @@ export default function AdminClient() {
                           <Button variant="outline" size="sm" onClick={() => { verDetalle(t.id); setShowNuevoUsuario(true); }} className="text-xs">
                             <Plus className="w-3 h-3 mr-1" /> Usuario
                           </Button>
+                          <Button variant="outline" size="sm" onClick={() => eliminarTaller(t.id, t.nombre)} className="text-xs border-red-500/40 text-red-500 hover:bg-red-500/10 hover:text-red-500">
+                            <X className="w-3 h-3 mr-1" /> Eliminar
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -468,12 +504,15 @@ export default function AdminClient() {
                           <span className="text-[10px] text-muted-foreground">{detalle.colorFondo}</span>
                         </div>
                       </div>
-                      <div className="flex gap-2 flex-shrink-0 self-start">
+                      <div className="flex gap-2 flex-shrink-0 self-start flex-wrap">
                         <Button variant="outline" size="sm" onClick={() => { startEdit(detalle); setTab('talleres'); }} className="text-xs">
                           <Pencil className="w-3 h-3 mr-1" /> Editar
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => crearUsuario(detalle.id)} className="text-xs">
                           <Plus className="w-3 h-3 mr-1" /> Usuario
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => eliminarTaller(detalle.id, detalle.nombre)} className="text-xs border-red-500/40 text-red-500 hover:bg-red-500/10 hover:text-red-500">
+                          <X className="w-3 h-3 mr-1" /> Eliminar Taller
                         </Button>
                       </div>
                     </div>
@@ -553,6 +592,10 @@ export default function AdminClient() {
                                       <button onClick={() => startEditUsuario(u)}
                                         className="text-[10px] font-bold px-2 py-0.5 rounded border border-[hsl(217,74%,45%)]/40 text-[hsl(217,74%,45%)] hover:bg-[hsl(217,74%,45%)]/10 transition">
                                         Editar
+                                      </button>
+                                      <button onClick={() => enviarResetUsuario(u.email, u.nombre)}
+                                        className="text-[10px] font-bold px-2 py-0.5 rounded border border-amber-500/40 text-amber-500 hover:bg-amber-500/10 transition flex items-center gap-1">
+                                        <KeyRound className="w-2.5 h-2.5" /> Reset pass
                                       </button>
                                       <button onClick={() => toggleUsuarioActivo(u.id, u.activo, detalle.id)}
                                         className={`text-[10px] font-bold px-2 py-0.5 rounded border transition ${u.activo ? 'border-red-400/40 text-red-400 hover:bg-red-400/10' : 'border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10'}`}>

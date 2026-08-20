@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,11 +60,16 @@ export default function LoginPage() {
             <div>
               <Label htmlFor="password">Contraseña</Label>
               <div className="relative mt-1">
-                <Input id="password" type={showPass ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e: any) => setPassword(e.target.value)} className="pr-10" />
+                <Input id="password" type={showPass ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={(e: any) => setPassword(e.target.value)} className="pr-10 [&::-ms-reveal]:hidden [&::-webkit-credentials-auto-fill-button]:hidden" />
                 <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowPass(!showPass)}>
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+            </div>
+            <div className="flex justify-end">
+              <Link href="/auth/recuperar" className="text-xs text-muted-foreground hover:text-foreground">
+                ¿Olvidaste tu contraseña?
+              </Link>
             </div>
             <Button type="submit" className="w-full" disabled={loading} loading={loading}>
               <LogIn className="w-4 h-4 mr-2" /> Ingresar
