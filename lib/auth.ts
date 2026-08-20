@@ -45,17 +45,21 @@ export const authOptions: NextAuthOptions = {
       const now = Math.floor(Date.now() / 1000);
       const checkedAt = (token.checkedAt as number) ?? 0;
       if (token.id && now - checkedAt > REVALIDAR_CADA_SEGUNDOS) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { activo: true, rol: true, tallerId: true },
-        });
-        if (!dbUser || !dbUser.activo) {
-          token.error = 'USER_INACTIVE';
-        } else {
-          token.role = dbUser.rol;
-          token.tallerId = dbUser.tallerId;
-          token.checkedAt = now;
-          delete token.error;
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { activo: true, rol: true, tallerId: true },
+          });
+          if (!dbUser || !dbUser.activo) {
+            token.error = 'USER_INACTIVE';
+          } else {
+            token.role = dbUser.rol;
+            token.tallerId = dbUser.tallerId;
+            token.checkedAt = now;
+            delete token.error;
+          }
+        } catch {
+          // Error de DB transitorio: conservar token actual sin marcar inactivo
         }
       }
 
