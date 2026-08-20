@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Building2, Plus, Pencil, Save, X, Users, Truck, FileText, Search, LogOut, Loader2, Palette, ArrowLeft, Upload, Wrench, Mail, Phone, MapPin, Calendar, ImageIcon, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
-import { GlobalSearch } from '@/components/global-search';
 import { NotificationsBell } from '@/components/notifications-bell';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,6 +101,7 @@ export default function AdminClient() {
   const [euNombre, setEuNombre] = useState('');
   const [euRol, setEuRol] = useState('ADMIN');
   const [euPassword, setEuPassword] = useState('');
+  const [euEmail, setEuEmail] = useState('');
   const [euSaving, setEuSaving] = useState(false);
   const [nuShowPass, setNuShowPass] = useState(false);
 
@@ -154,10 +154,13 @@ export default function AdminClient() {
       if (!r.ok) { toast.error(j?.error || 'Error'); return; }
       toast.success(isNew ? 'Taller creado' : 'Taller actualizado');
       setEditId(null);
-      setTab('talleres');
       fetchTalleres();
-      // Refresh detail if open
-      if (detalle && !isNew) { verDetalle(detalle.id); }
+      if (detalle && !isNew) {
+        setTab('detalle');
+        verDetalle(detalle.id);
+      } else {
+        setTab('talleres');
+      }
     } catch { toast.error('Error'); } finally { setSaving(false); }
   };
 
@@ -197,15 +200,17 @@ export default function AdminClient() {
   const startEditUsuario = (u: any) => {
     setEditUsuarioId(u.id);
     setEuNombre(u.nombre);
+    setEuEmail(u.email);
     setEuRol(u.rol);
     setEuPassword('');
   };
 
   const editarUsuario = async (tallerId: string) => {
     if (!euNombre.trim()) { toast.error('Nombre requerido'); return; }
+    if (!euEmail.trim() || !validarEmail(euEmail.trim())) { toast.error('Email inválido'); return; }
     setEuSaving(true);
     try {
-      const payload: any = { id: editUsuarioId, nombre: euNombre.trim(), rol: euRol };
+      const payload: any = { id: editUsuarioId, nombre: euNombre.trim(), email: euEmail.trim(), rol: euRol };
       if (euPassword.trim()) {
         if (euPassword.length < 6) { toast.error('Contraseña mínimo 6 caracteres'); setEuSaving(false); return; }
         payload.password = euPassword;
@@ -239,7 +244,7 @@ export default function AdminClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-      toast.success(`Enlace de reset enviado a ${nombre}`);
+      toast.success(`Enlace de restablecimiento enviado a ${nombre}`);
     } catch {
       toast.error('Error al enviar el correo');
     }
@@ -321,7 +326,7 @@ export default function AdminClient() {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-[hsl(217,74%,45%)]/10 border border-[hsl(217,74%,45%)]/30 flex items-center justify-center overflow-hidden p-1.5">
-              <img src="/icon-dmotor.svg" alt="D Motor" className="w-full h-full object-contain dark:invert" />
+              <img src="/icon-dmotor.svg" alt="D Motor" className="w-full h-full object-contain" style={{ filter: 'brightness(0) saturate(100%) invert(29%) sepia(92%) saturate(1094%) hue-rotate(203deg) brightness(95%)' }} />
             </div>
             <div>
               <h1 className="font-extrabold text-lg tracking-tight">D Motor — Super Admin</h1>
@@ -330,7 +335,6 @@ export default function AdminClient() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground hidden sm:inline">{(session?.user as any)?.email}</span>
-            <GlobalSearch />
             <NotificationsBell />
             <ThemeToggleButton />
             <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: '/auth/login' })} className="text-muted-foreground">
@@ -472,6 +476,14 @@ export default function AdminClient() {
             ) : detalle ? (
               <div className="space-y-6">
                 {/* Header del taller */}
+                {editId === detalle?.id ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2"><Pencil className="w-4 h-4 text-[hsl(217,74%,45%)]" /> Editar Taller</CardTitle>
+                    </CardHeader>
+                    <CardContent>{renderEditForm(false)}</CardContent>
+                  </Card>
+                ) : (
                 <Card className="border-[hsl(217,74%,45%)]/30">
                   <CardContent className="p-6">
                     <div className="flex flex-col sm:flex-row gap-6">
@@ -508,7 +520,7 @@ export default function AdminClient() {
                         </div>
                       </div>
                       <div className="flex gap-2 flex-shrink-0 self-start flex-wrap">
-                        <Button variant="outline" size="sm" onClick={() => { startEdit(detalle); setTab('talleres'); }} className="text-xs">
+                        <Button variant="outline" size="sm" onClick={() => startEdit(detalle)} className="text-xs">
                           <Pencil className="w-3 h-3 mr-1" /> Editar
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => crearUsuario(detalle.id)} className="text-xs">
@@ -521,6 +533,7 @@ export default function AdminClient() {
                     </div>
                   </CardContent>
                 </Card>
+                )}
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -606,7 +619,7 @@ export default function AdminClient() {
                                       </button>
                                       <button onClick={() => enviarResetUsuario(u.email, u.nombre)}
                                         className="text-[10px] font-bold px-2 py-0.5 rounded border border-amber-500/40 text-amber-500 hover:bg-amber-500/10 transition flex items-center gap-1">
-                                        <KeyRound className="w-2.5 h-2.5" /> Reset pass
+                                        <KeyRound className="w-2.5 h-2.5" /> Restablecer clave
                                       </button>
                                       <button onClick={() => toggleUsuarioActivo(u.id, u.activo, detalle.id)}
                                         className={`text-[10px] font-bold px-2 py-0.5 rounded border transition ${u.activo ? 'border-red-400/40 text-red-400 hover:bg-red-400/10' : 'border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10'}`}>
@@ -626,6 +639,10 @@ export default function AdminClient() {
                                         <div>
                                           <label className="text-[9px] font-bold text-muted-foreground block mb-1">NOMBRE</label>
                                           <Input className="h-7 text-xs w-40" value={euNombre} onChange={e => setEuNombre(e.target.value)} />
+                                        </div>
+                                        <div>
+                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">EMAIL</label>
+                                          <Input type="email" className={`h-7 text-xs w-44 ${euEmail && !validarEmail(euEmail) ? 'border-red-500' : ''}`} value={euEmail} onChange={e => setEuEmail(e.target.value)} />
                                         </div>
                                         <div>
                                           <label className="text-[9px] font-bold text-muted-foreground block mb-1">ROL</label>

@@ -122,6 +122,11 @@ export async function PATCH(req: NextRequest) {
     if (body.rol !== undefined) data.rol = body.rol;
     if (body.activo !== undefined) data.activo = body.activo;
     if (body.password) data.passwordHash = await bcrypt.hash(body.password, 10);
+    if (body.email !== undefined) {
+      const dup = await prisma.user.findFirst({ where: { email: body.email, NOT: { id: body.id } } });
+      if (dup) return NextResponse.json({ error: 'Ya existe un usuario con ese email' }, { status: 409 });
+      data.email = body.email;
+    }
 
     const user = await prisma.user.update({
       where: { id: body.id },
