@@ -320,7 +320,9 @@ export default function AdminClient() {
       <header className="bg-card border-b border-border px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/icon-dmotor.svg" alt="D Motor" className="w-10 h-10 object-contain dark:invert" />
+            <div className="w-10 h-10 rounded-lg bg-[hsl(217,74%,45%)]/10 border border-[hsl(217,74%,45%)]/30 flex items-center justify-center overflow-hidden p-1.5">
+              <img src="/icon-dmotor.svg" alt="D Motor" className="w-full h-full object-contain dark:invert" />
+            </div>
             <div>
               <h1 className="font-extrabold text-lg tracking-tight">D Motor — Super Admin</h1>
               <p className="text-xs text-muted-foreground">Gestión de talleres y usuarios</p>
