@@ -626,7 +626,7 @@ export function NuevaOTClient() {
                         )}
                         {conductorMismoDatos && (
                           <div className="text-sm text-muted-foreground bg-secondary/30 rounded-lg p-3">
-                            Se usarán los datos del cliente: <strong>{vehiculo?.cliente?.razonSocial ?? ncRazonSocial || '—'}</strong>
+                            Se usarán los datos del cliente: <strong>{(vehiculo?.cliente?.razonSocial ?? ncRazonSocial) || '—'}</strong>
                           </div>
                         )}
                       </div>
