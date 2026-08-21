@@ -1,23 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 
 function formatRut(value: string): string {
-  // Remove everything except digits and k/K
   let clean = value.replace(/[^0-9kK]/g, '').toUpperCase();
   if (clean.length === 0) return '';
-  // Separate body and verifier
   const dv = clean.slice(-1);
   const body = clean.slice(0, -1);
   if (body.length === 0) return clean;
-  // Add dots to body
   let formatted = '';
   const reversed = body.split('').reverse();
   for (let i = 0; i < reversed.length; i++) {
@@ -27,21 +24,36 @@ function formatRut(value: string): string {
   return formatted + '-' + dv;
 }
 
+interface TallerConfig {
+  nombre: string;
+  razonSocial: string;
+  logoUrl: string;
+  colorPrimario: string;
+  colorFondo: string;
+}
+
 export default function PortalLoginPage() {
   const [rut, setRut] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [tallerConfig, setTallerConfig] = useState<TallerConfig | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tallerSlug = searchParams.get('taller');
+
+  useEffect(() => {
+    if (!tallerSlug) return;
+    fetch(`/api/portal/taller-config?slug=${encodeURIComponent(tallerSlug)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setTallerConfig(d); })
+      .catch(() => {});
+  }, [tallerSlug]);
 
   const handleRutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-    // If user is deleting, allow natural deletion
-    if (raw.length < rut.length) {
-      setRut(raw);
-      return;
-    }
+    if (raw.length < rut.length) { setRut(raw); return; }
     setRut(formatRut(raw));
   };
 
@@ -64,16 +76,36 @@ export default function PortalLoginPage() {
     setLoading(false);
   };
 
+  const colorPrimario = tallerConfig?.colorPrimario ?? '#2563eb';
+  const nombre = tallerConfig?.razonSocial || tallerConfig?.nombre || 'D Motor';
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
-      {/* Theme toggle */}
       <div className="absolute top-4 right-4">
         <ThemeToggleButton />
       </div>
 
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Image src="/logo.png" alt="D Motor" width={180} height={54} className="object-contain mx-auto mb-2" priority />
+          {tallerConfig?.logoUrl ? (
+            <Image
+              src={tallerConfig.logoUrl}
+              alt={nombre}
+              width={200}
+              height={60}
+              className="object-contain mx-auto mb-2"
+              priority
+              unoptimized
+            />
+          ) : (
+            <div className="mx-auto mb-2">
+              {!tallerSlug ? (
+                <Image src="/logo.png" alt="D Motor" width={180} height={54} className="object-contain mx-auto" priority />
+              ) : (
+                <h1 className="text-2xl font-black text-foreground">{nombre}</h1>
+              )}
+            </div>
+          )}
           <p className="text-muted-foreground text-sm mt-1">Portal de Clientes</p>
         </div>
 
@@ -113,7 +145,12 @@ export default function PortalLoginPage() {
             </div>
           </div>
           {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-          <Button type="submit" disabled={loading} className="w-full font-black tracking-wider">
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full font-black tracking-wider"
+            style={{ backgroundColor: colorPrimario, borderColor: colorPrimario }}
+          >
             {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} INGRESAR
           </Button>
         </form>

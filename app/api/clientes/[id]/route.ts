@@ -138,13 +138,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           orderBy: { patente: 'asc' },
         },
         contactos: { orderBy: { predeterminado: 'desc' } },
+        taller: { select: { slug: true } },
         _count: { select: { vehiculos: true } },
       },
     });
 
     if (settingPassword && updated.email) {
       try {
-        const portalUrl = `${process.env.NEXTAUTH_URL ?? ''}/portal/login`;
+        const baseUrl = process.env.NEXTAUTH_URL ?? '';
+        const tallerSlug = (updated as any).taller?.slug;
+        const portalUrl = tallerSlug ? `${baseUrl}/portal/login?taller=${tallerSlug}` : `${baseUrl}/portal/login`;
         await sendEmail({
           to: updated.email,
           subject: 'Acceso a tu Portal de Clientes - D Motor',
