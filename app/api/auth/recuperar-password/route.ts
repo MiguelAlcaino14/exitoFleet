@@ -20,8 +20,10 @@ export async function POST(req: NextRequest) {
     const secret = process.env.NEXTAUTH_SECRET;
     if (!secret) return NextResponse.json({ error: 'Configuración incompleta' }, { status: 500 });
 
+    // hashSig: primeros 12 chars del passwordHash actual — el token queda inválido si la contraseña cambia
+    const hashSig = (user.passwordHash ?? '').slice(0, 12);
     const token = jwt.sign(
-      { email: user.email, purpose: 'reset-password' },
+      { email: user.email, purpose: 'reset-password', hashSig },
       secret,
       { expiresIn: '1h' }
     );

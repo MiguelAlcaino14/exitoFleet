@@ -28,6 +28,12 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({ where: { email: payload.email } });
     if (!user || !user.activo) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
 
+    // Verificar que el token corresponde al hash actual — si ya se usó, el hash cambió y el token es inválido
+    const hashSig = (user.passwordHash ?? '').slice(0, 12);
+    if (payload.hashSig !== hashSig) {
+      return NextResponse.json({ error: 'El enlace ya fue utilizado o expiró' }, { status: 400 });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
 

@@ -119,13 +119,12 @@ export function AppSidebar({ user }: SidebarProps) {
             )}
           </div>
           <Button
-            variant="ghost"
             size={collapsed ? 'icon' : 'sm'}
-            className="w-full mt-2 text-muted-foreground hover:text-destructive"
+            className="w-full mt-2 bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={() => signOut({ callbackUrl: '/auth/login' })}
           >
             <LogOut className="w-4 h-4" />
-            {!collapsed && <span className="ml-2">Cerrar Sesión</span>}
+            {!collapsed && <span className="ml-2">Cerrar sesión</span>}
           </Button>
         </div>
       </div>

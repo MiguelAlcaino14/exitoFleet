@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { getTallerScope, tallerWhere } from '@/lib/taller';
+import { sendEmail } from '@/lib/email';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const scope = await getTallerScope();
@@ -110,7 +111,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (body?.email !== undefined) data.email = body.email;
     if (body?.telefono !== undefined) data.telefono = body.telefono;
     if (body?.direccion !== undefined) data.direccion = body.direccion;
-    if (body?.portalPassword !== undefined && body.portalPassword.trim()) {
+    const settingPassword = body?.portalPassword !== undefined && body.portalPassword.trim();
+    if (settingPassword) {
       data.passwordHash = await bcrypt.hash(body.portalPassword, 10);
     }
 
@@ -139,6 +141,33 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         _count: { select: { vehiculos: true } },
       },
     });
+
+    if (settingPassword && updated.email) {
+      try {
+        const portalUrl = `${process.env.NEXTAUTH_URL ?? ''}/portal/login`;
+        await sendEmail({
+          to: updated.email,
+          subject: 'Acceso a tu Portal de Clientes - D Motor',
+          html: `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#fff">
+              <h2 style="color:#1a1a2e;margin-bottom:8px">Portal de Clientes</h2>
+              <p style="color:#555;margin-bottom:24px">Hola${updated.nombreContacto ? ` ${updated.nombreContacto}` : ''},</p>
+              <p style="color:#555">Tu taller ha activado tu acceso al <strong>Portal de Clientes D Motor</strong>. Desde ahí puedes revisar el estado de tus vehículos y órdenes de trabajo.</p>
+              <div style="background:#f5f5f5;border-radius:8px;padding:20px;margin:24px 0">
+                <p style="margin:0 0 8px;font-size:13px;color:#888">RUT Empresa (usuario)</p>
+                <p style="margin:0 0 16px;font-size:16px;font-weight:bold;color:#1a1a2e">${updated.rutEmpresa ?? '—'}</p>
+                <p style="margin:0 0 8px;font-size:13px;color:#888">Contraseña</p>
+                <p style="margin:0;font-size:16px;font-weight:bold;color:#1a1a2e">${body.portalPassword}</p>
+              </div>
+              <a href="${portalUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Ingresar al Portal</a>
+              <p style="margin-top:24px;font-size:12px;color:#aaa">D Motor — Sistema de gestión de taller</p>
+            </div>
+          `,
+        });
+      } catch (emailErr) {
+        console.error('Error al enviar email de acceso portal:', emailErr);
+      }
+    }
 
     return NextResponse.json(updated);
   } catch (err: any) {

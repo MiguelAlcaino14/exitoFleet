@@ -6,6 +6,14 @@ import {
   Search, ChevronLeft, ChevronRight, Truck, Trash2, Pencil, X, Save,
   AlertTriangle, Building2, Hash, Wrench, Filter, Plus, Loader2
 } from 'lucide-react';
+
+const TIPOS_VEHICULO = [
+  'Camión', 'Tracto Camión', 'Furgón', 'Van', 'Bus', 'Minibus',
+  'Remolque', 'Semirremolque', 'Grúa', 'Maquinaria', 'Otro',
+];
+
+const anioActual = new Date().getFullYear();
+const ANIOS = Array.from({ length: anioActual - 1970 + 2 }, (_, i) => anioActual + 1 - i);
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -148,6 +156,9 @@ export function VehiculosClient() {
           <div className="w-10 h-1 bg-primary mt-2 rounded-full" />
         </div>
         <div className="flex items-center gap-3">
+          <Badge variant="secondary" className="text-xs whitespace-nowrap">
+            {total} vehículo{total !== 1 ? 's' : ''}
+          </Badge>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -157,11 +168,8 @@ export function VehiculosClient() {
               onChange={(e: any) => setBuscar(e.target.value)}
             />
           </div>
-          <Badge variant="secondary" className="text-xs whitespace-nowrap">
-            {total} vehículo{total !== 1 ? 's' : ''}
-          </Badge>
           <Button size="sm" onClick={() => { setShowNuevo(true); setCrearError(''); }} className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold">
-            <Plus className="w-4 h-4 mr-1" /> Nuevo Vehículo
+            <Plus className="w-4 h-4 mr-1" /> Nuevo vehículo
           </Button>
         </div>
       </div>
@@ -333,20 +341,28 @@ export function VehiculosClient() {
                 <Input value={nuevoData.patente} onChange={(e: any) => setNuevoData({ ...nuevoData, patente: e.target.value })} placeholder="XX-XX-00" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
-                <Input value={nuevoData.tipoVehiculo} onChange={(e: any) => setNuevoData({ ...nuevoData, tipoVehiculo: e.target.value })} placeholder="Camión, Furgón..." />
+                <label className="text-xs text-muted-foreground mb-1 block">Tipo *</label>
+                <select value={nuevoData.tipoVehiculo} onChange={(e: any) => setNuevoData({ ...nuevoData, tipoVehiculo: e.target.value })}
+                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
+                  <option value="">Selecciona un tipo</option>
+                  {TIPOS_VEHICULO.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Marca</label>
-                <Input value={nuevoData.marca} onChange={(e: any) => setNuevoData({ ...nuevoData, marca: e.target.value })} />
+                <label className="text-xs text-muted-foreground mb-1 block">Marca *</label>
+                <Input value={nuevoData.marca} onChange={(e: any) => setNuevoData({ ...nuevoData, marca: e.target.value })} placeholder="Volvo, Scania" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Modelo</label>
-                <Input value={nuevoData.modelo} onChange={(e: any) => setNuevoData({ ...nuevoData, modelo: e.target.value })} />
+                <label className="text-xs text-muted-foreground mb-1 block">Modelo *</label>
+                <Input value={nuevoData.modelo} onChange={(e: any) => setNuevoData({ ...nuevoData, modelo: e.target.value })} placeholder="FH 540" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Año</label>
-                <Input type="number" value={nuevoData.anio} onChange={(e: any) => setNuevoData({ ...nuevoData, anio: e.target.value })} />
+                <label className="text-xs text-muted-foreground mb-1 block">Año *</label>
+                <select value={nuevoData.anio} onChange={(e: any) => setNuevoData({ ...nuevoData, anio: e.target.value })}
+                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
+                  <option value="">Selecciona un año</option>
+                  {ANIOS.map(a => <option key={a} value={String(a)}>{a}</option>)}
+                </select>
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Motor</label>
@@ -391,19 +407,27 @@ export function VehiculosClient() {
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
-                <Input value={editData.tipoVehiculo} onChange={(e: any) => setEditData({ ...editData, tipoVehiculo: e.target.value })} placeholder="Camión, Furgón..." />
+                <select value={editData.tipoVehiculo} onChange={(e: any) => setEditData({ ...editData, tipoVehiculo: e.target.value })}
+                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
+                  <option value="">Selecciona un tipo</option>
+                  {TIPOS_VEHICULO.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Marca</label>
-                <Input value={editData.marca} onChange={(e: any) => setEditData({ ...editData, marca: e.target.value })} />
+                <Input value={editData.marca} onChange={(e: any) => setEditData({ ...editData, marca: e.target.value })} placeholder="Volvo, Scania" />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Modelo</label>
-                <Input value={editData.modelo} onChange={(e: any) => setEditData({ ...editData, modelo: e.target.value })} />
+                <Input value={editData.modelo} onChange={(e: any) => setEditData({ ...editData, modelo: e.target.value })} placeholder="FH 540" />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Año</label>
-                <Input type="number" value={editData.anio} onChange={(e: any) => setEditData({ ...editData, anio: e.target.value })} />
+                <select value={editData.anio} onChange={(e: any) => setEditData({ ...editData, anio: e.target.value })}
+                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
+                  <option value="">Selecciona un año</option>
+                  {ANIOS.map(a => <option key={a} value={String(a)}>{a}</option>)}
+                </select>
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Motor</label>

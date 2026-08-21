@@ -103,13 +103,12 @@ export function MobileSidebar({ user }: MobileSidebarProps) {
                 </div>
               </div>
               <Button
-                variant="ghost"
                 size="sm"
-                className="w-full text-muted-foreground hover:text-destructive"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={() => signOut({ callbackUrl: '/auth/login' })}
               >
                 <LogOut className="w-4 h-4" />
-                <span className="ml-2">Cerrar Sesión</span>
+                <span className="ml-2">Cerrar sesión</span>
               </Button>
             </div>
           </div>

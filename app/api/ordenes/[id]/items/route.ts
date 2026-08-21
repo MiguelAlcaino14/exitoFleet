@@ -53,15 +53,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!orden) return NextResponse.json({ error: 'OT no encontrada' }, { status: 404 });
 
     const body = await req.json();
+    const costoUnitario = parseFloat(body?.costoUnitario) || 0;
+    const precioVenta = parseFloat(body?.precioVenta) || 0;
+    const margen = parseFloat(body?.margen) || 0;
+    if (costoUnitario < 0) return NextResponse.json({ error: 'El costo no puede ser negativo' }, { status: 400 });
+    if (precioVenta < 0) return NextResponse.json({ error: 'El precio de venta no puede ser negativo' }, { status: 400 });
+    if (margen >= 100) return NextResponse.json({ error: 'El margen no puede ser 100% o más' }, { status: 400 });
     const item = await prisma.itemValorizacion.create({
       data: {
         otId: params.id,
         tipo: body?.tipo ?? 'REPUESTO',
         descripcion: body?.descripcion ?? '',
         cantidad: parseFloat(body?.cantidad) || 1,
-        costoUnitario: parseFloat(body?.costoUnitario) || 0,
-        margen: parseFloat(body?.margen) || 0,
-        precioVenta: parseFloat(body?.precioVenta) || 0,
+        costoUnitario,
+        margen,
+        precioVenta,
         orden: parseInt(body?.orden) || 0,
       },
     });
@@ -122,9 +128,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const data: any = {};
     if (body?.descripcion !== undefined) data.descripcion = body.descripcion;
     if (body?.cantidad !== undefined) data.cantidad = parseFloat(body.cantidad) || 1;
-    if (body?.costoUnitario !== undefined) data.costoUnitario = parseFloat(body.costoUnitario) || 0;
-    if (body?.margen !== undefined) data.margen = parseFloat(body.margen) || 0;
-    if (body?.precioVenta !== undefined) data.precioVenta = parseFloat(body.precioVenta) || 0;
+    if (body?.costoUnitario !== undefined) {
+      const v = parseFloat(body.costoUnitario) || 0;
+      if (v < 0) return NextResponse.json({ error: 'El costo no puede ser negativo' }, { status: 400 });
+      data.costoUnitario = v;
+    }
+    if (body?.margen !== undefined) {
+      const v = parseFloat(body.margen) || 0;
+      if (v >= 100) return NextResponse.json({ error: 'El margen no puede ser 100% o más' }, { status: 400 });
+      data.margen = v;
+    }
+    if (body?.precioVenta !== undefined) {
+      const v = parseFloat(body.precioVenta) || 0;
+      if (v < 0) return NextResponse.json({ error: 'El precio de venta no puede ser negativo' }, { status: 400 });
+      data.precioVenta = v;
+    }
 
     await prisma.itemValorizacion.update({ where: { id: itemId }, data });
     await recalcularTotales(params.id);

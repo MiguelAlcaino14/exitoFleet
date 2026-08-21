@@ -22,6 +22,15 @@ const ESTADOS = [
   { id: 'CERRADA', label: 'Cerrada', color: '#71717a' },
 ];
 
+const TRANSICIONES_VALIDAS: Record<string, string[]> = {
+  POR_DIAGNOSTICAR: ['EN_COTIZACION'],
+  EN_COTIZACION: ['ESPERANDO_APROBACION', 'POR_DIAGNOSTICAR'],
+  ESPERANDO_APROBACION: ['EN_TRABAJO', 'EN_COTIZACION'],
+  EN_TRABAJO: ['POR_FACTURAR', 'ESPERANDO_APROBACION'],
+  POR_FACTURAR: ['CERRADA', 'EN_TRABAJO'],
+  CERRADA: ['POR_FACTURAR'],
+};
+
 const GRUPOS = [
   { key: 'REPUESTO', label: 'REPUESTOS', conCosto: true },
   { key: 'INSUMO', label: 'INSUMOS', conCosto: true },
@@ -73,6 +82,10 @@ export function OTDetalleClient({ otId }: { otId: string }) {
 
   // Diagnóstico
   const [diagnostico, setDiagnostico] = useState('');
+
+  // Edición de items
+  const [editItemId, setEditItemId] = useState<string | null>(null);
+  const [editItemData, setEditItemData] = useState<any>({});
 
   // Mecánicos
   const [mecanicos, setMecanicos] = useState<any[]>([]);
@@ -203,6 +216,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
     if (emailManual.trim()) allDest.push(emailManual.trim());
     if (allDest.length === 0) { toast.error('Selecciona al menos un destinatario'); return; }
     if (!cuentaSeleccionada) { toast.error('Selecciona una cuenta remitente'); return; }
+    if (totalGeneral <= 0) { toast.error('El total de la cotización debe ser mayor a $0 antes de enviar'); return; }
     setEnviando(true);
     try {
       const res = await fetch(`/api/ordenes/${otId}/enviar-cotizacion`, {
@@ -289,7 +303,10 @@ export function OTDetalleClient({ otId }: { otId: string }) {
     if (!descNuevo.trim()) return;
     const costo = parseFloat(costoNuevo) || 0;
     const margen = parseFloat(margenNuevo) || 0;
+    if (costo < 0) { toast.error('El costo no puede ser negativo'); return; }
+    if (margen >= 100) { toast.error('El margen no puede ser 100% o más'); return; }
     const venta = (tipoNuevo === 'MANO_DE_OBRA' || tipoNuevo === 'DESCUENTO') ? costo : calcVenta(costo, margen);
+    if (venta < 0) { toast.error('El precio de venta resultante no puede ser negativo'); return; }
     await fetch(`/api/ordenes/${otId}/items`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -311,6 +328,29 @@ export function OTDetalleClient({ otId }: { otId: string }) {
 
   const eliminarItem = async (itemId: string) => {
     await fetch(`/api/ordenes/${otId}/items?itemId=${itemId}`, { method: 'DELETE' });
+    fetchItems();
+    fetchOT();
+  };
+
+  const startEditItem = (item: any) => {
+    setEditItemId(item.id);
+    setEditItemData({ descripcion: item.descripcion, cantidad: item.cantidad, costoUnitario: item.costoUnitario, margen: item.margen, precioVenta: item.precioVenta, tipo: item.tipo });
+  };
+
+  const guardarEditItem = async () => {
+    if (!editItemId) return;
+    const costo = parseFloat(editItemData.costoUnitario) || 0;
+    const margen = parseFloat(editItemData.margen) || 0;
+    if (costo < 0) { toast.error('El costo no puede ser negativo'); return; }
+    if (margen >= 100) { toast.error('El margen no puede ser 100% o más'); return; }
+    const venta = (editItemData.tipo === 'MANO_DE_OBRA' || editItemData.tipo === 'DESCUENTO') ? costo : calcVenta(costo, margen);
+    if (venta < 0) { toast.error('El precio de venta resultante no puede ser negativo'); return; }
+    await fetch(`/api/ordenes/${otId}/items`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itemId: editItemId, descripcion: editItemData.descripcion, cantidad: editItemData.cantidad, costoUnitario: costo, margen, precioVenta: venta }),
+    });
+    setEditItemId(null);
     fetchItems();
     fetchOT();
   };
@@ -363,7 +403,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
   const horaHoy = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
 
   return (
-    <div className="p-6 lg:p-8 max-w-[1200px]">
+    <div className="p-6 lg:p-8">
 
       {/* ═══ VISTA IMPRESIÓN: COTIZACIÓN PROFESIONAL ═══ */}
       <div className="print-only" style={{ fontFamily: 'Arial, Helvetica, sans-serif', color: '#000', background: '#fff', padding: '20px 30px', fontSize: '11pt' }}>
@@ -535,7 +575,9 @@ export function OTDetalleClient({ otId }: { otId: string }) {
         <div className="flex gap-2 print:hidden items-center">
           <select value={ot?.estado ?? ''} onChange={(e) => cambiarEstado(e.target.value)} disabled={saving}
             className="bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold text-foreground">
-            {ESTADOS.map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
+            {ESTADOS.filter(e =>
+              e.id === ot?.estado || (TRANSICIONES_VALIDAS[ot?.estado ?? ''] ?? []).includes(e.id)
+            ).map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
           </select>
           {saving && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
         </div>
@@ -567,7 +609,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                   {/* Add note bar */}
                   <div className="flex gap-3 mb-6 p-3 bg-secondary/20 rounded-lg border border-border">
                     <Input value={notaTexto} onChange={(e) => setNotaTexto(e.target.value)}
-                      placeholder="Escribe un comentario o nota interna sobre esta OT..."
+                      placeholder="Escribe un comentario o nota interna sobre esta OT"
                       onKeyDown={(e) => e.key === 'Enter' && guardarNota()} className="flex-1" />
                     <Button variant="outline" size="sm" onClick={guardarNota} className="text-xs text-primary border-primary hover:bg-primary hover:text-primary-foreground">
                       <MessageSquare className="w-3 h-3 mr-1" /> Guardar Nota
@@ -623,7 +665,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                   <div className="mb-6 p-4 bg-secondary/30 rounded-lg border border-border">
                     <label className="block text-[10px] font-black tracking-widest text-muted-foreground mb-2">DIAGNÓSTICO TÉCNICO</label>
                     <Textarea value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)}
-                      placeholder="Describe el diagnóstico del mecánico..." className="min-h-[60px] mb-2" />
+                      placeholder="Describe el diagnóstico del mecánico" className="min-h-[60px] mb-2" />
                     <div className="flex items-center gap-3">
                       <Button size="sm" onClick={guardarDiagnostico} disabled={saving} className="text-xs bg-primary hover:bg-primary/90">
                         {saving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <FileText className="w-3 h-3 mr-1" />} Guardar Diagnóstico
@@ -649,7 +691,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                         onChange={(e) => { setDescNuevo(e.target.value); setShowSug(true); }}
                         onFocus={() => setShowSug(true)}
                         onBlur={() => setTimeout(() => setShowSug(false), 150)}
-                        placeholder="Ej: Filtro de aire..." onKeyDown={(e) => e.key === 'Enter' && agregarItem()} />
+                        placeholder="Filtro de aire, cambio de aceite" onKeyDown={(e) => e.key === 'Enter' && agregarItem()} />
                       {showSug && descNuevo.trim().length >= 1 && (() => {
                         const q = descNuevo.trim().toLowerCase();
                         const matches = sugerencias.filter((s: any) =>
@@ -685,15 +727,15 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-[9px] font-black tracking-widest text-muted-foreground">CTDAD</label>
-                      <Input type="number" value={cantNuevo} onChange={(e) => setCantNuevo(e.target.value)} className="w-[65px] text-center" />
+                      <Input type="number" value={cantNuevo} onChange={(e) => setCantNuevo(e.target.value)} className="w-[65px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-[9px] font-black tracking-widest text-muted-foreground">$ COSTO</label>
-                      <Input type="number" value={costoNuevo} onChange={(e) => setCostoNuevo(e.target.value)} placeholder="0" className="w-[100px]" />
+                      <Input type="number" value={costoNuevo} onChange={(e) => setCostoNuevo(e.target.value)} placeholder="0" className="w-[100px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-[9px] font-black tracking-widest text-muted-foreground">% MARGEN</label>
-                      <Input type="number" value={margenNuevo} onChange={(e) => setMargenNuevo(e.target.value)} className="w-[70px] text-center" />
+                      <Input type="number" value={margenNuevo} onChange={(e) => setMargenNuevo(e.target.value)} className="w-[70px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                     </div>
                     <Button onClick={agregarItem} className="font-bold text-xs h-9">
                       <Plus className="w-4 h-4 mr-1" /> AGREGAR
@@ -703,7 +745,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                   {/* Tabla agrupada */}
                   <div className="border border-border rounded-lg overflow-hidden">
                     {/* Header */}
-                    <div className="grid grid-cols-[1fr_60px_100px_80px_100px_100px_30px] bg-secondary/30 px-3 py-2 border-b border-border">
+                    <div className="grid grid-cols-[1fr_60px_100px_80px_100px_100px_52px] bg-secondary/30 px-3 py-2 border-b border-border">
                       {['DESCRIPCIÓN', 'CTDAD', '$ COSTO', '% MRG', '$ VENTA', '$ TOTAL', ''].map((h, i) => (
                         <div key={i} className={`text-[10px] font-black tracking-wider text-muted-foreground ${i >= 2 && i <= 5 ? 'text-right' : ''}`}>{h}</div>
                       ))}
@@ -722,8 +764,37 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                             const totalItem = Math.round((item.precioVenta || 0) * (item.cantidad || 1));
                             const esDesc = item.tipo === 'DESCUENTO';
                             const esMO = item.tipo === 'MANO_DE_OBRA';
+                            const enEdicion = editItemId === item.id;
+                            if (enEdicion) {
+                              return (
+                                <div key={item.id} className="px-3 py-3 border-b border-border bg-primary/5">
+                                  <div className="flex flex-wrap gap-2 items-end">
+                                    <div className="flex-1 min-w-[140px]">
+                                      <label className="text-[9px] font-bold text-muted-foreground">DESCRIPCIÓN</label>
+                                      <Input value={editItemData.descripcion} onChange={e => setEditItemData((p: any) => ({ ...p, descripcion: e.target.value }))} className="h-7 text-xs mt-0.5" />
+                                    </div>
+                                    <div>
+                                      <label className="text-[9px] font-bold text-muted-foreground">CTDAD</label>
+                                      <Input type="number" value={editItemData.cantidad} onChange={e => setEditItemData((p: any) => ({ ...p, cantidad: e.target.value }))} className="h-7 text-xs w-16 mt-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                    </div>
+                                    {!esMO && !esDesc && <>
+                                      <div>
+                                        <label className="text-[9px] font-bold text-muted-foreground">$ COSTO</label>
+                                        <Input type="number" value={editItemData.costoUnitario} onChange={e => setEditItemData((p: any) => ({ ...p, costoUnitario: e.target.value }))} className="h-7 text-xs w-24 mt-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                      </div>
+                                      <div>
+                                        <label className="text-[9px] font-bold text-muted-foreground">% MRG</label>
+                                        <Input type="number" value={editItemData.margen} onChange={e => setEditItemData((p: any) => ({ ...p, margen: e.target.value }))} className="h-7 text-xs w-16 mt-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                      </div>
+                                    </>}
+                                    <Button size="sm" className="h-7 text-xs" onClick={guardarEditItem}><Check className="w-3.5 h-3.5 mr-1" /> Guardar</Button>
+                                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditItemId(null)}>Cancelar</Button>
+                                  </div>
+                                </div>
+                              );
+                            }
                             return (
-                              <div key={item.id} className={`grid grid-cols-[1fr_60px_100px_80px_100px_100px_30px] px-3 py-2 border-b border-border items-center ${idx % 2 === 0 ? 'bg-background' : 'bg-secondary/10'}`}>
+                              <div key={item.id} className={`grid grid-cols-[1fr_60px_100px_80px_100px_100px_52px] px-3 py-2 border-b border-border items-center ${idx % 2 === 0 ? 'bg-background' : 'bg-secondary/10'}`}>
                                 <span className="text-sm text-foreground truncate">{item.descripcion}</span>
                                 <span className="text-sm text-center text-muted-foreground">{item.cantidad}</span>
                                 <span className="text-sm text-right text-muted-foreground">{esMO || esDesc ? '—' : formatCLP(item.costoUnitario)}</span>
@@ -732,13 +803,18 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                                 <span className={`text-sm text-right font-semibold ${esDesc ? 'text-destructive' : 'text-foreground'}`}>
                                   {esDesc ? `-${formatCLP(Math.abs(totalItem))}` : formatCLP(totalItem)}
                                 </span>
-                                <button onClick={() => eliminarItem(item.id)} title="Eliminar" className="text-muted-foreground hover:text-destructive text-center text-sm transition-colors">
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                <div className="flex items-center justify-center gap-1">
+                                  <button onClick={() => startEditItem(item)} title="Editar" className="text-muted-foreground hover:text-primary transition-colors">
+                                    <Save className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => eliminarItem(item.id)} title="Eliminar" className="text-muted-foreground hover:text-destructive transition-colors">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </div>
                             );
                           })}
-                          <div className="grid grid-cols-[1fr_60px_100px_80px_100px_100px_30px] px-3 py-2 bg-secondary/20 border-b-2 border-border">
+                          <div className="grid grid-cols-[1fr_60px_100px_80px_100px_100px_52px] px-3 py-2 bg-secondary/20 border-b-2 border-border">
                             <span className="text-[10px] font-bold tracking-wider text-muted-foreground">SUBTOTAL {grupo.label}</span>
                             <span /><span /><span /><span />
                             <span className="text-right font-bold text-sm text-primary">{formatCLP(subtotal)}</span>
@@ -866,7 +942,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                     <h3 className="text-[10px] font-black tracking-[2px] text-primary mb-3">OBSERVACIONES DE RECEPCIÓN</h3>
                     <Textarea value={checklist.observaciones ?? ''}
                       onChange={e => setChecklist({ ...checklist, observaciones: e.target.value })}
-                      placeholder="Daños visibles, rayones, abolladuras, piezas faltantes, observaciones del conductor..."
+                      placeholder="Daños visibles, rayones, abolladuras, piezas faltantes, observaciones del conductor"
                       rows={4} />
                   </div>
 
@@ -928,16 +1004,22 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                   <label className="block text-[10px] text-muted-foreground font-bold mb-0.5">FECHA INGRESO</label>
                   <span className="text-sm font-bold text-foreground">{formatDate(ot?.fechaIngreso)}</span>
                 </div>
+                {ot?.updatedAt && (
+                  <div>
+                    <label className="block text-[10px] text-muted-foreground font-bold mb-0.5">ÚLTIMA ACTUALIZACIÓN</label>
+                    <span className="text-sm font-bold text-foreground">{formatDateTime(ot.updatedAt)}</span>
+                  </div>
+                )}
                 {ot?.mecanico && (
                   <div>
                     <label className="block text-[10px] text-muted-foreground font-bold mb-0.5">MECÁNICO RESPONSABLE</label>
-                    <span className="text-sm font-bold text-primary uppercase">{ot.mecanico.nombre}</span>
+                    <span className="text-sm font-bold text-primary">{ot.mecanico.nombre}</span>
                   </div>
                 )}
                 {ot?.conductorNombre && (
                   <div>
                     <label className="block text-[10px] text-muted-foreground font-bold mb-0.5">CONDUCTOR</label>
-                    <span className="text-sm font-bold text-foreground uppercase">{ot.conductorNombre}</span>
+                    <span className="text-sm font-bold text-foreground">{ot.conductorNombre}</span>
                   </div>
                 )}
                 <div>

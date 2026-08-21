@@ -111,7 +111,7 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
 
   if (loading) {
     return (
-      <div className="p-6 lg:p-10 max-w-[1000px]">
+      <div className="p-6 lg:p-10 ">
         <div className="h-8 w-48 bg-muted rounded animate-pulse mb-6" />
         <div className="h-40 bg-muted rounded-lg animate-pulse" />
       </div>
@@ -120,7 +120,7 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
 
   if (!cliente) {
     return (
-      <div className="p-6 lg:p-10 max-w-[1000px]">
+      <div className="p-6 lg:p-10 ">
         <Button variant="ghost" onClick={() => router.push('/clientes')} className="mb-4"><ArrowLeft className="w-4 h-4 mr-2" /> Volver</Button>
         <p className="text-muted-foreground">Cliente no encontrado.</p>
       </div>
@@ -130,7 +130,7 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
   const totalOTs = (cliente?.vehiculos ?? []).reduce((sum: number, v: any) => sum + (v?.ordenes?.length ?? 0), 0);
 
   return (
-    <div className="p-6 lg:p-10 max-w-[1000px]">
+    <div className="p-6 lg:p-10 ">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <Button variant="ghost" size="icon" onClick={() => router.push('/clientes')}><ArrowLeft className="w-5 h-5" /></Button>
@@ -366,7 +366,7 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
               </div>
               <div>
                 <label className="text-[9px] font-bold tracking-wider text-muted-foreground mb-1 block">TIPO</label>
-                <Input value={nuevoVehiculo.tipoVehiculo} onChange={(e) => setNuevoVehiculo({ ...nuevoVehiculo, tipoVehiculo: e.target.value })} placeholder="Camión..." className="h-8 text-sm" />
+                <Input value={nuevoVehiculo.tipoVehiculo} onChange={(e) => setNuevoVehiculo({ ...nuevoVehiculo, tipoVehiculo: e.target.value })} placeholder="Camión, Furgón" className="h-8 text-sm" />
               </div>
               <div>
                 <label className="text-[9px] font-bold tracking-wider text-muted-foreground mb-1 block">AÑO</label>

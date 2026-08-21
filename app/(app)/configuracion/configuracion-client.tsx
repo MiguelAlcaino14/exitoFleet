@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { validarEmail, validarTelefono, validarRut, formatRutInput, formatTelefonoInput } from '@/lib/validaciones';
-import { Building2, Mail, Plus, Trash2, Star, Loader2, Users, Shield, Eye, EyeOff, Save, UserPlus, ToggleLeft, ToggleRight, Wrench, Pencil, Search } from 'lucide-react';
+import { Building2, Mail, Plus, Trash2, Star, Loader2, Users, Shield, Eye, EyeOff, Save, UserPlus, ToggleLeft, ToggleRight, Wrench, Pencil, Search, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,10 +47,19 @@ export function ConfiguracionClient() {
   // Mecánicos
   const [mecanicos, setMecanicos] = useState<any[]>([]);
   const [mecanicosLoading, setMecanicosLoading] = useState(true);
-  const [nuevoMecanico, setNuevoMecanico] = useState('');
   const [mecanicoSaving, setMecanicoSaving] = useState(false);
   const [editMecId, setEditMecId] = useState<string | null>(null);
   const [editMecNombre, setEditMecNombre] = useState('');
+  // Modal nuevo mecánico
+  const [showMecModal, setShowMecModal] = useState(false);
+  const [mecNombre, setMecNombre] = useState('');
+  const [mecRut, setMecRut] = useState('');
+  const [mecTelefono, setMecTelefono] = useState('');
+  const [mecEmail, setMecEmail] = useState('');
+  const [mecError, setMecError] = useState('');
+  // Eliminar usuario
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   // Tab activo
   const [seccion, setSeccion] = useState<'empresa' | 'correo' | 'usuarios' | 'mecanicos'>('empresa');
@@ -78,12 +87,35 @@ export function ConfiguracionClient() {
   };
 
   const crearMecanico = async () => {
-    if (!nuevoMecanico.trim()) { toast.error('Nombre requerido'); return; }
-    setMecanicoSaving(true);
-    const res = await fetch('/api/mecanicos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: nuevoMecanico }) });
-    if (res.ok) { toast.success('Mecánico creado'); setNuevoMecanico(''); await fetchMecanicos(); }
-    else { const d = await res.json(); toast.error(d.error || 'Error'); }
+    if (!mecNombre.trim()) { setMecError('Nombre requerido'); return; }
+    if (mecRut.trim() && !validarRut(mecRut)) { setMecError('RUT inválido'); return; }
+    if (mecTelefono.trim() && !validarTelefono(mecTelefono)) { setMecError('Teléfono inválido'); return; }
+    if (mecEmail.trim() && !validarEmail(mecEmail)) { setMecError('Email inválido'); return; }
+    setMecanicoSaving(true); setMecError('');
+    const res = await fetch('/api/mecanicos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: mecNombre.trim(), rut: mecRut || null, telefono: mecTelefono || null, email: mecEmail || null }) });
+    if (res.ok) {
+      toast.success('Mecánico creado');
+      setMecNombre(''); setMecRut(''); setMecTelefono(''); setMecEmail(''); setShowMecModal(false);
+      await fetchMecanicos();
+    } else { const d = await res.json(); setMecError(d.error || 'Error al crear mecánico'); }
     setMecanicoSaving(false);
+  };
+
+  const eliminarUsuario = async () => {
+    if (!deleteUserId) return;
+    setDeletingUser(true);
+    try {
+      const res = await fetch(`/api/usuarios?id=${deleteUserId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setUsuarios(prev => prev.filter(u => u.id !== deleteUserId));
+        toast.success('Usuario eliminado');
+      } else {
+        const d = await res.json();
+        toast.error(d.error || 'Error al eliminar');
+      }
+    } catch { toast.error('Error de conexión'); }
+    setDeletingUser(false);
+    setDeleteUserId(null);
   };
 
   const toggleMecanicoActivo = async (m: any) => {
@@ -233,35 +265,35 @@ export function ConfiguracionClient() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-xs font-bold">Razón Social *</Label>
-                    <Input value={empresa.razonSocial ?? ''} onChange={e => setEmpresa({ ...empresa, razonSocial: e.target.value })} placeholder="Ej: Full Truck Service SPA" className="mt-1" />
+                    <Input value={empresa.razonSocial ?? ''} onChange={e => setEmpresa({ ...empresa, razonSocial: e.target.value })} placeholder="Full Truck Service SPA" className="mt-1" />
                   </div>
                   <div>
                     <Label className="text-xs font-bold">RUT Empresa</Label>
-                    <Input value={empresa.rut ?? ''} onChange={e => setEmpresa({ ...empresa, rut: formatRutInput(e.target.value) })} placeholder="Ej: 76.115.891-0" className="mt-1" />
+                    <Input value={empresa.rut ?? ''} onChange={e => setEmpresa({ ...empresa, rut: formatRutInput(e.target.value) })} placeholder="76.115.891-0" className="mt-1" />
                   </div>
                 </div>
                 <div>
                   <Label className="text-xs font-bold">Dirección</Label>
-                  <Input value={empresa.direccion ?? ''} onChange={e => setEmpresa({ ...empresa, direccion: e.target.value })} placeholder="Ej: Los Nogales Poniente 33A, Lampa, RM" className="mt-1" />
+                  <Input value={empresa.direccion ?? ''} onChange={e => setEmpresa({ ...empresa, direccion: e.target.value })} placeholder="Los Nogales Poniente 33A, Lampa, RM" className="mt-1" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-xs font-bold">Teléfono Fijo</Label>
-                    <Input value={empresa.telefono ?? ''} onChange={e => setEmpresa({ ...empresa, telefono: formatTelefonoInput(e.target.value) })} placeholder="Ej: +569 52199926" className="mt-1" />
+                    <Input value={empresa.telefono ?? ''} onChange={e => setEmpresa({ ...empresa, telefono: formatTelefonoInput(e.target.value) })} placeholder="+56 9 5219 9926" className="mt-1" />
                   </div>
                   <div>
                     <Label className="text-xs font-bold">Celular</Label>
-                    <Input value={empresa.celular ?? ''} onChange={e => setEmpresa({ ...empresa, celular: formatTelefonoInput(e.target.value) })} placeholder="Ej: +569 12345678" className="mt-1" />
+                    <Input value={empresa.celular ?? ''} onChange={e => setEmpresa({ ...empresa, celular: formatTelefonoInput(e.target.value) })} placeholder="+56 9 1234 5678" className="mt-1" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-xs font-bold">Email de Contacto</Label>
-                    <Input value={empresa.email ?? ''} onChange={e => setEmpresa({ ...empresa, email: e.target.value })} placeholder="Ej: contacto@taller.cl" className="mt-1" />
+                    <Input value={empresa.email ?? ''} onChange={e => setEmpresa({ ...empresa, email: e.target.value })} placeholder="contacto@taller.cl" className="mt-1" />
                   </div>
                   <div>
                     <Label className="text-xs font-bold">División / Giro</Label>
-                    <Input value={empresa.division ?? ''} onChange={e => setEmpresa({ ...empresa, division: e.target.value })} placeholder="Ej: División Camiones" className="mt-1" />
+                    <Input value={empresa.division ?? ''} onChange={e => setEmpresa({ ...empresa, division: e.target.value })} placeholder="División Camiones" className="mt-1" />
                   </div>
                 </div>
                 <Button onClick={guardarEmpresa} disabled={empresaSaving} className="font-bold text-xs tracking-wider mt-2">
@@ -313,11 +345,11 @@ export function ConfiguracionClient() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Nombre (área)</Label>
-                  <Input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Secretaría" className="mt-1" />
+                  <Input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Secretaría" className="mt-1" />
                 </div>
                 <div>
                   <Label className="text-xs">Email</Label>
-                  <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="Ej: secretaria@taller.cl" className="mt-1" />
+                  <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="secretaria@taller.cl" className="mt-1" />
                 </div>
               </div>
               <Button onClick={agregarCuenta} disabled={cuentaSaving} className="mt-3 text-xs font-bold">
@@ -354,11 +386,11 @@ export function ConfiguracionClient() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs">Nombre completo *</Label>
-                    <Input value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} placeholder="Ej: María López" className="mt-1" />
+                    <Input value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} placeholder="María López" className="mt-1" />
                   </div>
                   <div>
                     <Label className="text-xs">Email *</Label>
-                    <Input value={nuevoEmail} onChange={e => setNuevoEmail(e.target.value)} placeholder="Ej: maria@taller.cl" className="mt-1" />
+                    <Input value={nuevoEmail} onChange={e => setNuevoEmail(e.target.value)} placeholder="maria@taller.cl" className="mt-1" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -443,6 +475,9 @@ export function ConfiguracionClient() {
                       <button onClick={() => toggleActivo(u)} className="text-muted-foreground hover:text-foreground" title={u.activo ? 'Desactivar' : 'Activar'}>
                         {u.activo ? <ToggleRight className="w-6 h-6 text-emerald-500" /> : <ToggleLeft className="w-6 h-6" />}
                       </button>
+                      <button onClick={() => setDeleteUserId(u.id)} className="text-muted-foreground hover:text-destructive" title="Eliminar usuario">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -455,20 +490,19 @@ export function ConfiguracionClient() {
       {seccion === 'mecanicos' && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-primary" /> Mecánicos
-            </CardTitle>
-            <p className="text-muted-foreground text-sm">Los mecánicos activos aparecerán como opción al crear una OT.</p>
-          </CardHeader>
-          <CardContent>
-            {/* Crear */}
-            <div className="flex gap-3 mb-6">
-              <Input value={nuevoMecanico} onChange={e => setNuevoMecanico(e.target.value)} placeholder="Nombre del mecánico" className="flex-1"
-                onKeyDown={e => e.key === 'Enter' && crearMecanico()} />
-              <Button onClick={crearMecanico} disabled={mecanicoSaving} className="text-xs font-bold">
-                {mecanicoSaving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />} Agregar
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Wrench className="w-5 h-5 text-primary" /> Mecánicos
+                </CardTitle>
+                <p className="text-muted-foreground text-sm mt-1">Los mecánicos activos aparecerán como opción al crear una OT.</p>
+              </div>
+              <Button onClick={() => { setShowMecModal(true); setMecError(''); }} className="text-xs font-bold">
+                <Plus className="w-4 h-4 mr-1" /> Nuevo mecánico
               </Button>
             </div>
+          </CardHeader>
+          <CardContent>
 
             {mecanicosLoading ? (
               <div className="text-center py-10"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></div>
@@ -511,6 +545,58 @@ export function ConfiguracionClient() {
             )}
           </CardContent>
         </Card>
+      )}
+      {/* Modal nuevo mecánico */}
+      {showMecModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!mecanicoSaving) setShowMecModal(false); }}>
+          <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-foreground text-lg">Nuevo mecánico</h3>
+              <button onClick={() => setShowMecModal(false)} className="p-1 hover:bg-secondary rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Nombre *</Label>
+                <Input value={mecNombre} onChange={e => { setMecNombre(e.target.value); setMecError(''); }} placeholder="Juan Pérez" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">RUT</Label>
+                <Input value={mecRut} onChange={e => { setMecRut(formatRutInput(e.target.value)); setMecError(''); }} placeholder="12.345.678-9" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Teléfono</Label>
+                <Input value={mecTelefono} onChange={e => { setMecTelefono(e.target.value); setMecError(''); }} placeholder="+56 9 1234 5678" className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Email</Label>
+                <Input value={mecEmail} onChange={e => { setMecEmail(e.target.value); setMecError(''); }} placeholder="juan@taller.cl" className="mt-1" type="email" />
+              </div>
+              {mecError && <p className="text-sm text-red-500">{mecError}</p>}
+              <div className="flex gap-2 pt-1">
+                <Button onClick={crearMecanico} disabled={mecanicoSaving} className="text-xs font-bold">
+                  {mecanicoSaving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />} Crear mecánico
+                </Button>
+                <Button variant="ghost" onClick={() => setShowMecModal(false)} className="text-xs">Cancelar</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal eliminar usuario */}
+      {deleteUserId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!deletingUser) setDeleteUserId(null); }}>
+          <div className="bg-card border border-border rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-foreground mb-2">Eliminar usuario</h3>
+            <p className="text-sm text-muted-foreground mb-4">¿Seguro que deseas eliminar este usuario? Esta acción no se puede deshacer.</p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setDeleteUserId(null)} disabled={deletingUser}>Cancelar</Button>
+              <Button variant="destructive" size="sm" onClick={eliminarUsuario} disabled={deletingUser}>
+                {deletingUser ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Trash2 className="w-4 h-4 mr-1" />} Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

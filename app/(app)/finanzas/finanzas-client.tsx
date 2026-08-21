@@ -180,6 +180,7 @@ export function FinanzasClient() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-secondary/30 text-left">
@@ -205,6 +206,7 @@ export function FinanzasClient() {
               )}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
 
@@ -216,6 +218,7 @@ export function FinanzasClient() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-secondary/30 text-left">
@@ -247,6 +250,7 @@ export function FinanzasClient() {
               )}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
 
@@ -303,6 +307,7 @@ export function FinanzasClient() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-secondary/30 text-left">
@@ -329,6 +334,7 @@ export function FinanzasClient() {
               )}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -9,6 +9,7 @@ const ROLE_ROUTES: [string, string[]][] = [
   ['/configuracion', ['ADMIN', 'SUPER_ADMIN']],
   ['/api/configuracion-taller', ['ADMIN', 'SUPER_ADMIN']],
   ['/api/cuentas-correo', ['ADMIN', 'SUPER_ADMIN']],
+  ['/ot/nueva', ['ADMIN', 'JEFE_TALLER', 'RECEPCION', 'SUPER_ADMIN']],
   ['/kanban', ['ADMIN', 'JEFE_TALLER', 'RECEPCION', 'SUPER_ADMIN']],
   ['/vehiculos', ['ADMIN', 'JEFE_TALLER', 'RECEPCION', 'SUPER_ADMIN']],
   ['/api/vehiculos', ['ADMIN', 'JEFE_TALLER', 'RECEPCION', 'SUPER_ADMIN']],

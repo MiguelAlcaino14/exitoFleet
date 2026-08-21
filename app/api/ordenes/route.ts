@@ -43,18 +43,24 @@ export async function POST(req: NextRequest) {
 
       if (!clienteId && nv?.nuevoCliente) {
         const nc = nv.nuevoCliente;
-        const cliente = await prisma.cliente.create({
-          data: {
-            rutEmpresa: nc?.rutEmpresa || null,
-            razonSocial: nc?.razonSocial ?? 'Sin nombre',
-            nombreContacto: nc?.nombreContacto || null,
-            email: nc?.email || null,
-            telefono: nc?.telefono || null,
-            direccion: nc?.direccion || null,
-            tallerId: tid,
-          },
-        });
-        clienteId = cliente.id;
+        if (nc?.rutEmpresa) {
+          const existing = await prisma.cliente.findFirst({ where: { rutEmpresa: nc.rutEmpresa, tallerId: tid } });
+          if (existing) clienteId = existing.id;
+        }
+        if (!clienteId) {
+          const cliente = await prisma.cliente.create({
+            data: {
+              rutEmpresa: nc?.rutEmpresa || null,
+              razonSocial: nc?.razonSocial ?? 'Sin nombre',
+              nombreContacto: nc?.nombreContacto || null,
+              email: nc?.email || null,
+              telefono: nc?.telefono || null,
+              direccion: nc?.direccion || null,
+              tallerId: tid,
+            },
+          });
+          clienteId = cliente.id;
+        }
       }
 
       const vehiculo = await prisma.vehiculo.create({

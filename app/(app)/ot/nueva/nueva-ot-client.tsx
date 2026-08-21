@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { validarRut, validarTelefono, validarEmail, formatRutInput, validarPatente, formatPatenteInput } from '@/lib/validaciones';
-import { Search, Truck, User, CheckCircle, Plus, ArrowLeft } from 'lucide-react';
+import { Search, Truck, User, CheckCircle, Plus, ArrowLeft, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,25 @@ const COMBUSTIBLES = [
   { val: 'F', label: 'F', color: '#22c55e' },
 ];
 
+const TIPOS_VEHICULO = [
+  'Camión', 'Tracto Camión', 'Furgón', 'Van', 'Bus', 'Minibus',
+  'Remolque', 'Semirremolque', 'Grúa', 'Maquinaria', 'Otro',
+];
+
 const STEP_LABELS = ['Vehículo y Cliente', 'Datos de Ingreso', 'Checklist'];
+
+const anioActual = new Date().getFullYear();
+const ANIOS = Array.from({ length: anioActual - 1970 + 2 }, (_, i) => anioActual + 1 - i);
+
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return (
+    <div className="flex items-center gap-1 mt-1">
+      <AlertCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+      <span className="text-xs text-red-500">{msg}</span>
+    </div>
+  );
+}
 
 function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
   return (
@@ -52,12 +70,26 @@ export function NuevaOTClient() {
   const [buscando, setBuscando] = useState(false);
   const [vehiculo, setVehiculo] = useState<any>(null);
   const [esNuevo, setEsNuevo] = useState(false);
+  const [buscarMsg, setBuscarMsg] = useState('');
+
+  // Sugerencias de patente
+  const [sugerencias, setSugerencias] = useState<any[]>([]);
+  const [showSugerencias, setShowSugerencias] = useState(false);
+  const sugerenciasRef = useRef<HTMLDivElement>(null);
+
+  // Errores por campo (step 1)
+  const [errores1, setErrores1] = useState<Record<string, string>>({});
+  // Errores step 2
+  const [errores2, setErrores2] = useState<Record<string, string>>({});
+  // Errores step 3
+  const [errores3, setErrores3] = useState<Record<string, string>>({});
 
   // Form fields
   const [km, setKm] = useState('');
   const [combustible, setCombustible] = useState('');
   const [motivo, setMotivo] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [conductorMismoDatos, setConductorMismoDatos] = useState(false);
   const [conductorNombre, setConductorNombre] = useState('');
   const [conductorTelefono, setConductorTelefono] = useState('');
   const [mecanicoId, setMecanicoId] = useState('');
@@ -85,56 +117,126 @@ export function NuevaOTClient() {
   const [otCreada, setOtCreada] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/api/mecanicos?activos=1').then(r => r.json()).then(d => setMecanicos(d ?? [])).catch(() => {});
+    if (wizardStep === 2) {
+      fetch('/api/mecanicos?activos=1').then(r => r.json()).then(d => setMecanicos(d ?? [])).catch(() => {});
+    }
+  }, [wizardStep]);
+
+  // Sugerencias de patente al escribir
+  useEffect(() => {
+    if (patente.length < 2) { setSugerencias([]); setShowSugerencias(false); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/vehiculos?buscar=${encodeURIComponent(patente)}&page=1`);
+        const data = await res.json();
+        setSugerencias((data.vehiculos ?? []).slice(0, 5));
+        setShowSugerencias((data.vehiculos ?? []).length > 0);
+      } catch { setSugerencias([]); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [patente]);
+
+  // Cerrar sugerencias al hacer click fuera
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (sugerenciasRef.current && !sugerenciasRef.current.contains(e.target as Node)) {
+        setShowSugerencias(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  const seleccionarSugerencia = (v: any) => {
+    setPatente(v.patente);
+    setSugerencias([]);
+    setShowSugerencias(false);
+    // Auto-buscar
+    setVehiculo(v);
+    setEsNuevo(false);
+    setWizardStep(2);
+    setScreen('formulario');
+    setBuscarMsg('');
+  };
 
   const buscarPatente = async () => {
     if (!patente.trim()) { toast.error('Ingresa una patente'); return; }
     if (!validarPatente(patente)) { toast.error('Patente inválida — formato: ABCD-12, AB-1234 o A-1234'); return; }
     setBuscando(true);
+    setBuscarMsg('');
     try {
       const res = await fetch(`/api/vehiculos/buscar?patente=${encodeURIComponent(patente.trim())}`);
       const data = await res.json();
       if (data?.found) {
         setVehiculo(data.vehiculo);
         setEsNuevo(false);
-        setWizardStep(2); // vehículo existente → saltar paso 1
+        setWizardStep(2);
+        setScreen('formulario');
       } else {
+        // No encontrado — NO crear automáticamente, mostrar mensaje
+        setBuscarMsg('Vehículo no registrado. Puedes registrarlo como nuevo.');
         setVehiculo(null);
-        setEsNuevo(true);
-        setWizardStep(1); // nuevo vehículo → mostrar paso 1
       }
-      setScreen('formulario');
     } catch {
       toast.error('Error al buscar vehículo');
     }
     setBuscando(false);
   };
 
-  const validateStep = (s: 1 | 2 | 3): boolean => {
-    if (s === 1 && esNuevo) {
-      if (!nvMarca.trim()) { toast.error('La marca del vehículo es requerida'); return false; }
-      if (!nvModelo.trim()) { toast.error('El modelo del vehículo es requerido'); return false; }
-      if (!nvAnio.trim()) { toast.error('El año del vehículo es requerido'); return false; }
-      if (!ncRazonSocial.trim()) { toast.error('La razón social del cliente es requerida'); return false; }
+  const iniciarNuevoVehiculo = () => {
+    setEsNuevo(true);
+    setVehiculo(null);
+    setWizardStep(1);
+    setScreen('formulario');
+    setBuscarMsg('');
+    setErrores1({});
+  };
+
+  const validateStep1 = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (!nvMarca.trim()) errs.marca = 'Marca requerida';
+    if (!nvModelo.trim()) errs.modelo = 'Modelo requerido';
+    if (!nvAnio) errs.anio = 'Año requerido';
+    if (!nvTipo) errs.tipo = 'Tipo requerido';
+    if (!ncRazonSocial.trim()) errs.razonSocial = 'Razón social requerida';
+    if (ncRut.trim() && !validarRut(ncRut)) errs.rut = 'RUT inválido — formato: 12.345.678-9';
+    if (ncEmail.trim() && !validarEmail(ncEmail)) errs.email = 'Email inválido';
+    if (ncTelefono.trim() && !validarTelefono(ncTelefono)) errs.telefono = 'Teléfono inválido';
+    setErrores1(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const validateStep2 = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (!km.trim() || isNaN(Number(km))) errs.km = 'Kilometraje requerido';
+    if (!combustible) errs.combustible = 'Nivel de combustible requerido';
+    if (!motivo.trim()) errs.motivo = 'Motivo de ingreso requerido';
+    if (!mecanicoId) errs.mecanico = 'Mecánico responsable requerido';
+    if (!conductorMismoDatos) {
+      if (!conductorNombre.trim()) errs.conductorNombre = 'Nombre del conductor requerido';
+      if (!conductorTelefono.trim()) errs.conductorTelefono = 'Teléfono del conductor requerido';
+      else if (!validarTelefono(conductorTelefono)) errs.conductorTelefono = 'Teléfono inválido';
     }
-    if (s === 2) {
-      if (!motivo.trim()) { toast.error('El motivo de ingreso es requerido'); return false; }
-      if (conductorTelefono.trim() && !validarTelefono(conductorTelefono)) {
-        toast.error('Teléfono del conductor inválido — solo dígitos');
-        return false;
-      }
-    }
-    return true;
+    setErrores2(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const validateStep3 = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (!checklist.estadoCarroceria.trim()) errs.estadoCarroceria = 'Estado de carrocería requerido';
+    if (!checklist.nivelAceite.trim()) errs.nivelAceite = 'Nivel de aceite requerido';
+    if (!checklist.nivelLiquidoFrenos.trim()) errs.nivelLiquidoFrenos = 'Nivel de líquido de frenos requerido';
+    setErrores3(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleNext = () => {
-    if (!validateStep(wizardStep)) return;
+    if (wizardStep === 1 && esNuevo && !validateStep1()) return;
+    if (wizardStep === 2 && !validateStep2()) return;
     setWizardStep((prev) => (prev < 3 ? ((prev + 1) as 1 | 2 | 3) : prev));
   };
 
   const handleBack = () => {
-    // Step 1 (new vehicle) or step 2 with existing vehicle → back to search
     if (wizardStep === 1 || (wizardStep === 2 && !esNuevo)) {
       setScreen('buscar');
       setVehiculo(null);
@@ -144,16 +246,12 @@ export function NuevaOTClient() {
     setWizardStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3) : prev));
   };
 
+  // Si conductor es mismo que contacto del cliente
+  const nombreConductorFinal = conductorMismoDatos ? (vehiculo?.cliente?.razonSocial ?? ncRazonSocial) : conductorNombre;
+  const telConductorFinal = conductorMismoDatos ? (vehiculo?.cliente?.telefono ?? ncTelefono) : conductorTelefono;
+
   const crearOT = async () => {
-    if (esNuevo) {
-      if (ncRut.trim() && !validarRut(ncRut)) { toast.error('RUT del cliente inválido — formato: 12.345.678-9'); return; }
-      if (ncEmail.trim() && !validarEmail(ncEmail)) { toast.error('Email del cliente inválido'); return; }
-      if (ncTelefono.trim() && !validarTelefono(ncTelefono)) { toast.error('Teléfono del cliente inválido — solo dígitos'); return; }
-      if (nvAnio.trim()) {
-        const anio = parseInt(nvAnio);
-        if (isNaN(anio) || anio < 1900 || anio > new Date().getFullYear() + 1) { toast.error('Año del vehículo inválido'); return; }
-      }
-    }
+    if (!validateStep3()) return;
     setSubmitting(true);
     try {
       const body: any = {
@@ -161,8 +259,8 @@ export function NuevaOTClient() {
         nivelCombustible: combustible,
         motivoIngreso: motivo,
         observaciones,
-        conductorNombre,
-        conductorTelefono,
+        conductorNombre: nombreConductorFinal,
+        conductorTelefono: telConductorFinal,
         mecanicoId: mecanicoId || undefined,
         checklist,
       };
@@ -216,7 +314,7 @@ export function NuevaOTClient() {
           </p>
           <div className="flex gap-3 justify-center">
             <Link href={`/ot/${otCreada?.id}`}>
-              <Button>Ver Detalle</Button>
+              <Button>Ver detalle</Button>
             </Link>
             <Button variant="outline" onClick={() => {
               setScreen('buscar');
@@ -229,7 +327,11 @@ export function NuevaOTClient() {
               setObservaciones('');
               setConductorNombre('');
               setConductorTelefono('');
+              setConductorMismoDatos(false);
+              setMecanicoId('');
               setWizardStep(1);
+              setBuscarMsg('');
+              setErrores1({}); setErrores2({}); setErrores3({});
             }}>
               <Plus className="w-4 h-4 mr-2" /> Nueva OT
             </Button>
@@ -240,14 +342,14 @@ export function NuevaOTClient() {
   }
 
   return (
-    <div className="p-6 lg:p-10 max-w-[900px]">
+    <div className="p-6 lg:p-10">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <Link href="/dashboard">
           <Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button>
         </Link>
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight font-display">Nueva Orden de Trabajo</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight font-display">Nueva orden de trabajo</h1>
           <div className="w-10 h-1 bg-primary mt-2 rounded-full" />
         </div>
       </div>
@@ -259,22 +361,59 @@ export function NuevaOTClient() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Search className="w-5 h-5 text-primary" /> Buscar por Patente
+                  <Search className="w-5 h-5 text-primary" /> Buscar vehículo por patente
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground text-sm mb-6">Ingresa la patente del vehículo para comenzar</p>
-                <div className="flex gap-3">
-                  <Input
-                    placeholder="Ej: ABCD-12"
-                    value={patente}
-                    onChange={(e: any) => setPatente(formatPatenteInput(e.target.value))}
-                    className="text-lg font-mono tracking-wider"
-                    onKeyDown={(e: any) => e.key === 'Enter' && buscarPatente()}
-                  />
-                  <Button onClick={buscarPatente} disabled={buscando} loading={buscando}>
-                    <Search className="w-4 h-4 mr-2" /> Buscar
-                  </Button>
+                <p className="text-muted-foreground text-sm mb-6">Ingresa la patente del vehículo para buscarlo en el sistema</p>
+                <div className="relative" ref={sugerenciasRef}>
+                  <div className="flex gap-3">
+                    <div className="relative flex-1">
+                      <Input
+                        placeholder="ABCD-12"
+                        value={patente}
+                        onChange={(e: any) => { setPatente(formatPatenteInput(e.target.value)); setBuscarMsg(''); }}
+                        className="text-lg font-mono tracking-wider"
+                        onKeyDown={(e: any) => e.key === 'Enter' && buscarPatente()}
+                        onFocus={() => sugerencias.length > 0 && setShowSugerencias(true)}
+                      />
+                      {/* Dropdown sugerencias */}
+                      {showSugerencias && sugerencias.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
+                          {sugerencias.map((v: any) => (
+                            <button
+                              key={v.id}
+                              type="button"
+                              className="w-full text-left px-4 py-2.5 hover:bg-secondary/50 flex items-center gap-3 transition"
+                              onClick={() => seleccionarSugerencia(v)}
+                            >
+                              <Truck className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              <span className="font-mono font-bold text-foreground">{v.patente}</span>
+                              <span className="text-sm text-muted-foreground">{[v.marca, v.modelo].filter(Boolean).join(' ')}</span>
+                              <span className="ml-auto text-xs text-muted-foreground">{v.cliente?.razonSocial}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <Button onClick={buscarPatente} disabled={buscando} loading={buscando}>
+                      <Search className="w-4 h-4 mr-2" /> Buscar
+                    </Button>
+                  </div>
+
+                  {/* Mensaje si no existe */}
+                  {buscarMsg && (
+                    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                      className="mt-4 p-4 rounded-lg border border-amber-500/30 bg-amber-500/5 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        {buscarMsg}
+                      </div>
+                      <Button size="sm" onClick={iniciarNuevoVehiculo} className="ml-4 flex-shrink-0">
+                        <Plus className="w-4 h-4 mr-1" /> Registrar vehículo
+                      </Button>
+                    </motion.div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -288,27 +427,85 @@ export function NuevaOTClient() {
             <StepIndicator step={wizardStep} />
 
             <AnimatePresence mode="wait">
-              {/* ── PASO 1: Vehículo y Cliente ── */}
+              {/* ── PASO 1: Vehículo y Cliente (solo si es nuevo) ── */}
               {wizardStep === 1 && esNuevo && (
                 <motion.div key="step1" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-6">
                   <Card>
-                    <CardHeader><CardTitle className="text-base">Nuevo Vehículo: {patente}</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base">Nuevo vehículo: {patente}</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div><Label>Marca *</Label><Input className="mt-1" value={nvMarca} onChange={(e: any) => setNvMarca(e.target.value)} placeholder="Volvo, Scania..." /></div>
-                        <div><Label>Modelo *</Label><Input className="mt-1" value={nvModelo} onChange={(e: any) => setNvModelo(e.target.value)} placeholder="FH 540..." /></div>
-                        <div><Label>Año *</Label><Input className="mt-1" value={nvAnio} onChange={(e: any) => setNvAnio(e.target.value)} placeholder="2024" type="number" /></div>
-                        <div><Label>Tipo</Label><Input className="mt-1" value={nvTipo} onChange={(e: any) => setNvTipo(e.target.value)} placeholder="Tracto Camión" /></div>
+                        <div>
+                          <Label>Marca *</Label>
+                          <Input className={`mt-1 ${errores1.marca ? 'border-red-500' : ''}`} value={nvMarca}
+                            onChange={(e: any) => { setNvMarca(e.target.value); setErrores1(p => ({ ...p, marca: '' })); }}
+                            placeholder="Volvo, Scania, Mercedes" />
+                          <FieldError msg={errores1.marca} />
+                        </div>
+                        <div>
+                          <Label>Modelo *</Label>
+                          <Input className={`mt-1 ${errores1.modelo ? 'border-red-500' : ''}`} value={nvModelo}
+                            onChange={(e: any) => { setNvModelo(e.target.value); setErrores1(p => ({ ...p, modelo: '' })); }}
+                            placeholder="FH 540, Axor 2535" />
+                          <FieldError msg={errores1.modelo} />
+                        </div>
+                        <div>
+                          <Label>Tipo *</Label>
+                          <select value={nvTipo}
+                            onChange={(e: any) => { setNvTipo(e.target.value); setErrores1(p => ({ ...p, tipo: '' })); }}
+                            className={`w-full mt-1 bg-background border rounded-lg px-3 py-2 text-sm text-foreground ${errores1.tipo ? 'border-red-500' : 'border-border'}`}>
+                            <option value="">Selecciona un tipo</option>
+                            {TIPOS_VEHICULO.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                          <FieldError msg={errores1.tipo} />
+                        </div>
+                        <div>
+                          <Label>Año *</Label>
+                          <select value={nvAnio}
+                            onChange={(e: any) => { setNvAnio(e.target.value); setErrores1(p => ({ ...p, anio: '' })); }}
+                            className={`w-full mt-1 bg-background border rounded-lg px-3 py-2 text-sm text-foreground ${errores1.anio ? 'border-red-500' : 'border-border'}`}>
+                            <option value="">Selecciona un año</option>
+                            {ANIOS.map(a => <option key={a} value={String(a)}>{a}</option>)}
+                          </select>
+                          <FieldError msg={errores1.anio} />
+                        </div>
                       </div>
-                      <div><Label>VIN</Label><Input className="mt-1" value={nvVin} onChange={(e: any) => setNvVin(e.target.value)} placeholder="Número de chasis" /></div>
+                      <div>
+                        <Label>VIN / N° Chasis</Label>
+                        <Input className="mt-1" value={nvVin}
+                          onChange={(e: any) => setNvVin(e.target.value)} placeholder="Número de chasis o VIN" />
+                      </div>
 
                       <div className="border-t border-border pt-4 mt-4">
-                        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><User className="w-4 h-4" /> Datos del Cliente</h3>
+                        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><User className="w-4 h-4" /> Datos del cliente *</h3>
                         <div className="grid grid-cols-2 gap-4">
-                          <div><Label>Razón Social *</Label><Input className="mt-1" value={ncRazonSocial} onChange={(e: any) => setNcRazonSocial(e.target.value)} placeholder="Empresa S.A." /></div>
-                          <div><Label>RUT Empresa</Label><Input className="mt-1" value={ncRut} onChange={(e: any) => setNcRut(formatRutInput(e.target.value))} placeholder="76.123.456-7" /></div>
-                          <div><Label>Email</Label><Input className="mt-1" value={ncEmail} onChange={(e: any) => setNcEmail(e.target.value)} placeholder="contacto@empresa.cl" type="email" /></div>
-                          <div><Label>Teléfono</Label><Input className="mt-1" value={ncTelefono} onChange={(e: any) => setNcTelefono(e.target.value)} placeholder="+569..." /></div>
+                          <div>
+                            <Label>Razón social *</Label>
+                            <Input className={`mt-1 ${errores1.razonSocial ? 'border-red-500' : ''}`} value={ncRazonSocial}
+                              onChange={(e: any) => { setNcRazonSocial(e.target.value); setErrores1(p => ({ ...p, razonSocial: '' })); }}
+                              placeholder="Empresa Transportes S.A." />
+                            <FieldError msg={errores1.razonSocial} />
+                          </div>
+                          <div>
+                            <Label>RUT empresa</Label>
+                            <Input className={`mt-1 ${errores1.rut ? 'border-red-500' : ''}`} value={ncRut}
+                              onChange={(e: any) => { setNcRut(formatRutInput(e.target.value)); setErrores1(p => ({ ...p, rut: '' })); }}
+                              placeholder="76.123.456-7" />
+                            <FieldError msg={errores1.rut} />
+                          </div>
+                          <div>
+                            <Label>Email</Label>
+                            <Input className={`mt-1 ${errores1.email ? 'border-red-500' : ''}`} value={ncEmail}
+                              onChange={(e: any) => { setNcEmail(e.target.value); setErrores1(p => ({ ...p, email: '' })); }}
+                              placeholder="contacto@empresa.cl" type="email" />
+                            <FieldError msg={errores1.email} />
+                          </div>
+                          <div>
+                            <Label>Teléfono</Label>
+                            <Input className={`mt-1 ${errores1.telefono ? 'border-red-500' : ''}`} value={ncTelefono}
+                              onChange={(e: any) => { setNcTelefono(e.target.value); setErrores1(p => ({ ...p, telefono: '' })); }}
+                              placeholder="+56 9 1234 5678" />
+                            <FieldError msg={errores1.telefono} />
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -340,21 +537,30 @@ export function NuevaOTClient() {
                   )}
 
                   <Card>
-                    <CardHeader><CardTitle className="text-base">Datos de Ingreso</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base">Datos de ingreso</CardTitle></CardHeader>
                     <CardContent className="space-y-5">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label>Kilometraje</Label>
-                          <Input className="mt-1 font-mono" value={km} onChange={(e: any) => setKm(e.target.value)} placeholder="Ej: 54000" type="number" />
+                          <Label>Kilometraje *</Label>
+                          <Input
+                            className={`mt-1 font-mono ${errores2.km ? 'border-red-500' : ''}`}
+                            value={km}
+                            onChange={(e: any) => { setKm(e.target.value.replace(/[^0-9]/g, '')); setErrores2(p => ({ ...p, km: '' })); }}
+                            placeholder="54000"
+                            inputMode="numeric"
+                            style={{ MozAppearance: 'textfield' } as any}
+                            onWheel={(e: any) => e.target.blur()}
+                          />
+                          <FieldError msg={errores2.km} />
                         </div>
                         <div>
-                          <Label>Nivel Combustible</Label>
+                          <Label>Nivel de combustible *</Label>
                           <div className="flex gap-2 mt-1">
                             {COMBUSTIBLES.map((c) => (
                               <button
                                 key={c.val}
                                 type="button"
-                                onClick={() => setCombustible(c.val)}
+                                onClick={() => { setCombustible(c.val); setErrores2(p => ({ ...p, combustible: '' })); }}
                                 className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all border ${
                                   combustible === c.val
                                     ? 'text-white shadow-lg scale-105'
@@ -366,26 +572,79 @@ export function NuevaOTClient() {
                               </button>
                             ))}
                           </div>
+                          <FieldError msg={errores2.combustible} />
                         </div>
                       </div>
 
                       <div>
-                        <Label>Motivo de Ingreso *</Label>
-                        <Textarea className="mt-1" rows={3} value={motivo} onChange={(e: any) => setMotivo(e.target.value)} placeholder="Describa el motivo del ingreso al taller..." />
+                        <Label>Motivo de ingreso *</Label>
+                        <Textarea
+                          className={`mt-1 ${errores2.motivo ? 'border-red-500' : ''}`}
+                          rows={3}
+                          value={motivo}
+                          onChange={(e: any) => { setMotivo(e.target.value); setErrores2(p => ({ ...p, motivo: '' })); }}
+                          placeholder="Describa el motivo del ingreso al taller"
+                        />
+                        <FieldError msg={errores2.motivo} />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><Label>Nombre Conductor</Label><Input className="mt-1" value={conductorNombre} onChange={(e: any) => setConductorNombre(e.target.value)} /></div>
-                        <div><Label>Teléfono Conductor</Label><Input className="mt-1" value={conductorTelefono} onChange={(e: any) => setConductorTelefono(e.target.value)} /></div>
+                      {/* Conductor */}
+                      <div className="border border-border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-semibold">Datos del conductor *</Label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox
+                              checked={conductorMismoDatos}
+                              onCheckedChange={(v: any) => setConductorMismoDatos(!!v)}
+                            />
+                            <span className="text-xs text-muted-foreground">Mismos datos del contacto</span>
+                          </label>
+                        </div>
+                        {!conductorMismoDatos && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-xs">Nombre *</Label>
+                              <Input
+                                className={`mt-1 ${errores2.conductorNombre ? 'border-red-500' : ''}`}
+                                value={conductorNombre}
+                                onChange={(e: any) => { setConductorNombre(e.target.value); setErrores2(p => ({ ...p, conductorNombre: '' })); }}
+                                placeholder="Juan Pérez"
+                              />
+                              <FieldError msg={errores2.conductorNombre} />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Teléfono *</Label>
+                              <Input
+                                className={`mt-1 ${errores2.conductorTelefono ? 'border-red-500' : ''}`}
+                                value={conductorTelefono}
+                                onChange={(e: any) => { setConductorTelefono(e.target.value); setErrores2(p => ({ ...p, conductorTelefono: '' })); }}
+                                placeholder="+56 9 1234 5678"
+                              />
+                              <FieldError msg={errores2.conductorTelefono} />
+                            </div>
+                          </div>
+                        )}
+                        {conductorMismoDatos && (
+                          <div className="text-sm text-muted-foreground bg-secondary/30 rounded-lg p-3">
+                            Se usarán los datos del cliente: <strong>{vehiculo?.cliente?.razonSocial ?? ncRazonSocial || '—'}</strong>
+                          </div>
+                        )}
                       </div>
 
                       <div>
-                        <Label>Mecánico Responsable</Label>
-                        <select value={mecanicoId} onChange={(e: any) => setMecanicoId(e.target.value)}
-                          className="w-full mt-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
-                          <option value="">— Sin asignar —</option>
+                        <Label>Mecánico responsable *</Label>
+                        <select
+                          value={mecanicoId}
+                          onChange={(e: any) => { setMecanicoId(e.target.value); setErrores2(p => ({ ...p, mecanico: '' })); }}
+                          className={`w-full mt-1 bg-background border rounded-lg px-3 py-2 text-sm text-foreground ${errores2.mecanico ? 'border-red-500' : 'border-border'}`}
+                        >
+                          <option value="">Selecciona un mecánico</option>
                           {mecanicos.map((m: any) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                         </select>
+                        {mecanicos.length === 0 && (
+                          <p className="text-xs text-amber-500 mt-1">No hay mecánicos activos. Agrégalos en Configuración → Mecánicos.</p>
+                        )}
+                        <FieldError msg={errores2.mecanico} />
                       </div>
                     </CardContent>
                   </Card>
@@ -396,47 +655,74 @@ export function NuevaOTClient() {
               {wizardStep === 3 && (
                 <motion.div key="step3" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-6">
                   <Card>
-                    <CardHeader><CardTitle className="text-base">Checklist de Recepción</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base">Checklist de recepción</CardTitle></CardHeader>
                     <CardContent className="space-y-5">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        {[
-                          { key: 'gato', label: 'Gato' },
-                          { key: 'llaveRuedas', label: 'Llave Ruedas' },
-                          { key: 'ruedaRepuesto', label: 'Rueda Repuesto' },
-                          { key: 'triangulos', label: 'Triángulos' },
-                          { key: 'extintor', label: 'Extintor' },
-                          { key: 'botiquin', label: 'Botiquín' },
-                          { key: 'documentos', label: 'Documentos' },
-                        ].map((item) => (
-                          <div key={item.key} className="flex items-center gap-2">
-                            <Checkbox
-                              checked={(checklist as any)?.[item.key] ?? false}
-                              onCheckedChange={(v: any) => setChecklist((prev) => ({ ...(prev ?? {}), [item.key]: !!v }))}
-                            />
-                            <Label className="text-sm cursor-pointer">{item.label}</Label>
-                          </div>
-                        ))}
+                      <div>
+                        <Label className="text-xs font-bold tracking-wider text-muted-foreground uppercase mb-3 block">Elementos presentes en el vehículo</Label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                          {[
+                            { key: 'gato', label: 'Gato' },
+                            { key: 'llaveRuedas', label: 'Llave ruedas' },
+                            { key: 'ruedaRepuesto', label: 'Rueda repuesto' },
+                            { key: 'triangulos', label: 'Triángulos' },
+                            { key: 'extintor', label: 'Extintor' },
+                            { key: 'botiquin', label: 'Botiquín' },
+                            { key: 'documentos', label: 'Documentos' },
+                          ].map((item) => (
+                            <div key={item.key} className="flex items-center gap-2">
+                              <Checkbox
+                                checked={(checklist as any)?.[item.key] ?? false}
+                                onCheckedChange={(v: any) => setChecklist((prev) => ({ ...(prev ?? {}), [item.key]: !!v }))}
+                              />
+                              <Label className="text-sm cursor-pointer">{item.label}</Label>
+                            </div>
+                          ))}
+                        </div>
                       </div>
 
                       <div>
-                        <Label>Estado Carrocería</Label>
-                        <Input className="mt-1" value={checklist?.estadoCarroceria ?? ''} onChange={(e: any) => setChecklist((p) => ({ ...(p ?? {}), estadoCarroceria: e.target.value }))} placeholder="Buen estado / Golpe lateral izq..." />
+                        <Label>Estado de carrocería *</Label>
+                        <Input
+                          className={`mt-1 ${errores3.estadoCarroceria ? 'border-red-500' : ''}`}
+                          value={checklist?.estadoCarroceria ?? ''}
+                          onChange={(e: any) => { setChecklist((p) => ({ ...(p ?? {}), estadoCarroceria: e.target.value })); setErrores3(p => ({ ...p, estadoCarroceria: '' })); }}
+                          placeholder="Buen estado / Golpe lateral izquierdo"
+                        />
+                        <FieldError msg={errores3.estadoCarroceria} />
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label>Nivel Aceite</Label>
-                          <Input className="mt-1" value={checklist?.nivelAceite ?? ''} onChange={(e: any) => setChecklist((p) => ({ ...(p ?? {}), nivelAceite: e.target.value }))} placeholder="Normal / Bajo..." />
+                          <Label>Nivel de aceite *</Label>
+                          <Input
+                            className={`mt-1 ${errores3.nivelAceite ? 'border-red-500' : ''}`}
+                            value={checklist?.nivelAceite ?? ''}
+                            onChange={(e: any) => { setChecklist((p) => ({ ...(p ?? {}), nivelAceite: e.target.value })); setErrores3(p => ({ ...p, nivelAceite: '' })); }}
+                            placeholder="Normal / Bajo"
+                          />
+                          <FieldError msg={errores3.nivelAceite} />
                         </div>
                         <div>
-                          <Label>Nivel Líquido Frenos</Label>
-                          <Input className="mt-1" value={checklist?.nivelLiquidoFrenos ?? ''} onChange={(e: any) => setChecklist((p) => ({ ...(p ?? {}), nivelLiquidoFrenos: e.target.value }))} placeholder="Normal / Bajo..." />
+                          <Label>Nivel líquido de frenos *</Label>
+                          <Input
+                            className={`mt-1 ${errores3.nivelLiquidoFrenos ? 'border-red-500' : ''}`}
+                            value={checklist?.nivelLiquidoFrenos ?? ''}
+                            onChange={(e: any) => { setChecklist((p) => ({ ...(p ?? {}), nivelLiquidoFrenos: e.target.value })); setErrores3(p => ({ ...p, nivelLiquidoFrenos: '' })); }}
+                            placeholder="Normal / Bajo"
+                          />
+                          <FieldError msg={errores3.nivelLiquidoFrenos} />
                         </div>
                       </div>
 
                       <div>
-                        <Label>Observaciones del Checklist</Label>
-                        <Textarea className="mt-1" rows={3} value={checklist?.observaciones ?? ''} onChange={(e: any) => setChecklist((p) => ({ ...(p ?? {}), observaciones: e.target.value }))} placeholder="Observaciones de la recepción..." />
+                        <Label>Observaciones de recepción</Label>
+                        <Textarea
+                          className="mt-1"
+                          rows={3}
+                          value={checklist?.observaciones ?? ''}
+                          onChange={(e: any) => setChecklist((p) => ({ ...(p ?? {}), observaciones: e.target.value }))}
+                          placeholder="Observaciones adicionales de la recepción"
+                        />
                       </div>
                     </CardContent>
                   </Card>
@@ -455,7 +741,7 @@ export function NuevaOTClient() {
                 </Button>
               ) : (
                 <Button onClick={crearOT} disabled={submitting} loading={submitting}>
-                  <Plus className="w-4 h-4 mr-2" /> Crear Orden de Trabajo
+                  <Plus className="w-4 h-4 mr-2" /> Crear orden de trabajo
                 </Button>
               )}
             </div>

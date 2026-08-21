@@ -145,6 +145,9 @@ model CuentaCorreo {
 model Mecanico {
   id        String    @id @default(cuid())
   nombre    String
+  rut       String?
+  telefono  String?
+  email     String?
   activo    Boolean   @default(true)
   tallerId  String?
   taller    Taller?   @relation(fields: [tallerId], references: [id])

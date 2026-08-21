@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { formatRutInput, formatTelefonoInput } from '@/lib/validaciones';
+import { formatRutInput, formatTelefonoInput, validarRut, validarEmail, validarTelefono } from '@/lib/validaciones';
 import Link from 'next/link';
 import { Users, Building2, Mail, Phone, Truck, Search, ChevronLeft, ChevronRight, Trash2, AlertTriangle, Plus, X, Save, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,9 +25,11 @@ export function ClientesClient() {
 
   // Nuevo cliente
   const [showNuevo, setShowNuevo] = useState(false);
+  const [tipoCliente, setTipoCliente] = useState<'empresa' | 'persona'>('empresa');
   const [nuevoForm, setNuevoForm] = useState({ razonSocial: '', rutEmpresa: '', giro: '', nombreContacto: '', email: '', telefono: '', direccion: '' });
   const [creando, setCreando] = useState(false);
   const [crearError, setCrearError] = useState('');
+  const [crearErrores, setCrearErrores] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetch('/api/clientes')
@@ -55,7 +57,18 @@ export function ClientesClient() {
   useEffect(() => { setPage(1); }, [filtro]);
 
   const handleCrear = async () => {
-    if (!nuevoForm.razonSocial.trim()) { setCrearError('Razón social es requerida'); return; }
+    const errs: Record<string, string> = {};
+    if (!nuevoForm.razonSocial.trim()) errs.razonSocial = tipoCliente === 'empresa' ? 'Razón social requerida' : 'Nombre requerido';
+    if (!nuevoForm.rutEmpresa.trim()) errs.rutEmpresa = 'RUT requerido';
+    else if (!validarRut(nuevoForm.rutEmpresa)) errs.rutEmpresa = 'RUT inválido';
+    if (!nuevoForm.email.trim()) errs.email = 'Email requerido';
+    else if (!validarEmail(nuevoForm.email)) errs.email = 'Email inválido';
+    if (!nuevoForm.telefono.trim()) errs.telefono = 'Teléfono requerido';
+    else if (!validarTelefono(nuevoForm.telefono)) errs.telefono = 'Teléfono inválido';
+    if (tipoCliente === 'empresa' && !nuevoForm.nombreContacto.trim()) errs.nombreContacto = 'Nombre de contacto requerido';
+    setCrearErrores(errs);
+    if (Object.keys(errs).length > 0) return;
+
     setCreando(true); setCrearError('');
     try {
       const res = await fetch('/api/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nuevoForm) });
@@ -64,6 +77,7 @@ export function ClientesClient() {
       setClientes(prev => [...prev, data].sort((a, b) => (a.razonSocial ?? '').localeCompare(b.razonSocial ?? '')));
       setShowNuevo(false);
       setNuevoForm({ razonSocial: '', rutEmpresa: '', giro: '', nombreContacto: '', email: '', telefono: '', direccion: '' });
+      setCrearErrores({});
       toast.success('Cliente creado');
     } catch { setCrearError('Error de conexión'); } finally { setCreando(false); }
   };
@@ -98,6 +112,9 @@ export function ClientesClient() {
           <div className="w-10 h-1 bg-primary mt-2 rounded-full" />
         </div>
         <div className="flex items-center gap-3">
+          <Badge variant="secondary" className="text-xs whitespace-nowrap">
+            {clientesFiltrados.length} cliente{clientesFiltrados.length !== 1 ? 's' : ''}
+          </Badge>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -107,11 +124,8 @@ export function ClientesClient() {
               onChange={(e: any) => setFiltro(e.target.value)}
             />
           </div>
-          <Badge variant="secondary" className="text-xs whitespace-nowrap">
-            {clientesFiltrados.length} clientes
-          </Badge>
-          <Button size="sm" onClick={() => { setShowNuevo(true); setCrearError(''); }} className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold">
-            <Plus className="w-4 h-4 mr-1" /> Nuevo Cliente
+          <Button size="sm" onClick={() => { setShowNuevo(true); setCrearError(''); setCrearErrores({}); setNuevoForm({ razonSocial: '', rutEmpresa: '', giro: '', nombreContacto: '', email: '', telefono: '', direccion: '' }); }} className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold">
+            <Plus className="w-4 h-4 mr-1" /> Nuevo cliente
           </Button>
         </div>
       </div>
@@ -121,6 +135,7 @@ export function ClientesClient() {
       ) : (
         <Card>
           <CardContent className="p-0">
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-secondary/30 text-left">
@@ -168,6 +183,7 @@ export function ClientesClient() {
                 )}
               </tbody>
             </table>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -240,40 +256,76 @@ export function ClientesClient() {
 
       {/* Nuevo Cliente Modal */}
       {showNuevo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!creando) setShowNuevo(false); }}>
-          <div className="bg-card border border-border rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-semibold text-foreground text-lg">Nuevo Cliente</h3>
-              <button onClick={() => setShowNuevo(false)} className="p-1 hover:bg-secondary rounded-lg"><X className="w-5 h-5" /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!creando) { setShowNuevo(false); setCrearErrores({}); } }}>
+          <div className="bg-card border border-border rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-foreground text-lg">Nuevo cliente</h3>
+              <button onClick={() => { setShowNuevo(false); setCrearErrores({}); }} className="p-1 hover:bg-secondary rounded-lg"><X className="w-5 h-5" /></button>
             </div>
+
+            {/* Selector Persona / Empresa */}
+            <div className="flex gap-2 mb-4 bg-secondary/20 p-1 rounded-lg">
+              {(['empresa', 'persona'] as const).map(t => (
+                <button key={t} type="button"
+                  className={`flex-1 py-2 rounded-md text-sm font-semibold transition ${tipoCliente === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  onClick={() => setTipoCliente(t)}>
+                  {t === 'empresa' ? 'Empresa' : 'Persona'}
+                </button>
+              ))}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
-                <label className="text-xs text-muted-foreground mb-1 block">Razón Social *</label>
-                <Input value={nuevoForm.razonSocial} onChange={(e: any) => setNuevoForm({ ...nuevoForm, razonSocial: e.target.value })} placeholder="Nombre de la empresa" />
+                <label className="text-xs text-muted-foreground mb-1 block">{tipoCliente === 'empresa' ? 'Razón social *' : 'Nombre *'}</label>
+                <Input value={nuevoForm.razonSocial}
+                  onChange={(e: any) => { setNuevoForm({ ...nuevoForm, razonSocial: e.target.value }); setCrearErrores(p => ({ ...p, razonSocial: '' })); }}
+                  placeholder={tipoCliente === 'empresa' ? 'Empresa Transportes S.A.' : 'Juan Pérez'}
+                  className={crearErrores.razonSocial ? 'border-red-500' : ''} />
+                {crearErrores.razonSocial && <p className="text-xs text-red-500 mt-1">{crearErrores.razonSocial}</p>}
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">RUT</label>
-                <Input value={nuevoForm.rutEmpresa} onChange={(e: any) => setNuevoForm({ ...nuevoForm, rutEmpresa: formatRutInput(e.target.value) })} placeholder="76.314.706-1" />
+                <label className="text-xs text-muted-foreground mb-1 block">{tipoCliente === 'empresa' ? 'RUT empresa *' : 'RUT *'}</label>
+                <Input value={nuevoForm.rutEmpresa}
+                  onChange={(e: any) => { setNuevoForm({ ...nuevoForm, rutEmpresa: formatRutInput(e.target.value) }); setCrearErrores(p => ({ ...p, rutEmpresa: '' })); }}
+                  placeholder="76.314.706-1"
+                  className={crearErrores.rutEmpresa ? 'border-red-500' : ''} />
+                {crearErrores.rutEmpresa && <p className="text-xs text-red-500 mt-1">{crearErrores.rutEmpresa}</p>}
               </div>
-              <div className="sm:col-span-2">
-                <label className="text-xs text-muted-foreground mb-1 block">Giro</label>
-                <Input value={nuevoForm.giro} onChange={(e: any) => setNuevoForm({ ...nuevoForm, giro: e.target.value })} placeholder="Ej: Transporte de carga" />
+              {tipoCliente === 'empresa' && (
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Giro</label>
+                  <Input value={nuevoForm.giro} onChange={(e: any) => setNuevoForm({ ...nuevoForm, giro: e.target.value })} placeholder="Transporte de carga" />
+                </div>
+              )}
+              {tipoCliente === 'empresa' && (
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Nombre de contacto *</label>
+                  <Input value={nuevoForm.nombreContacto}
+                    onChange={(e: any) => { setNuevoForm({ ...nuevoForm, nombreContacto: e.target.value }); setCrearErrores(p => ({ ...p, nombreContacto: '' })); }}
+                    placeholder="Juan Pérez"
+                    className={crearErrores.nombreContacto ? 'border-red-500' : ''} />
+                  {crearErrores.nombreContacto && <p className="text-xs text-red-500 mt-1">{crearErrores.nombreContacto}</p>}
+                </div>
+              )}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Email *</label>
+                <Input type="email" value={nuevoForm.email}
+                  onChange={(e: any) => { setNuevoForm({ ...nuevoForm, email: e.target.value }); setCrearErrores(p => ({ ...p, email: '' })); }}
+                  placeholder="contacto@empresa.cl"
+                  className={crearErrores.email ? 'border-red-500' : ''} />
+                {crearErrores.email && <p className="text-xs text-red-500 mt-1">{crearErrores.email}</p>}
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Contacto Principal</label>
-                <Input value={nuevoForm.nombreContacto} onChange={(e: any) => setNuevoForm({ ...nuevoForm, nombreContacto: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Email</label>
-                <Input type="email" value={nuevoForm.email} onChange={(e: any) => setNuevoForm({ ...nuevoForm, email: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Teléfono</label>
-                <Input value={nuevoForm.telefono} onChange={(e: any) => setNuevoForm({ ...nuevoForm, telefono: formatTelefonoInput(e.target.value) })} />
+                <label className="text-xs text-muted-foreground mb-1 block">Teléfono *</label>
+                <Input value={nuevoForm.telefono}
+                  onChange={(e: any) => { setNuevoForm({ ...nuevoForm, telefono: e.target.value }); setCrearErrores(p => ({ ...p, telefono: '' })); }}
+                  placeholder="+56 9 1234 5678"
+                  className={crearErrores.telefono ? 'border-red-500' : ''} />
+                {crearErrores.telefono && <p className="text-xs text-red-500 mt-1">{crearErrores.telefono}</p>}
               </div>
               <div className="sm:col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">Dirección</label>
-                <Input value={nuevoForm.direccion} onChange={(e: any) => setNuevoForm({ ...nuevoForm, direccion: e.target.value })} />
+                <Input value={nuevoForm.direccion} onChange={(e: any) => setNuevoForm({ ...nuevoForm, direccion: e.target.value })} placeholder="Av. Principal 123, Santiago" />
               </div>
             </div>
             {crearError && <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-3"><p className="text-sm text-red-400">{crearError}</p></div>}

@@ -142,6 +142,7 @@ export function DashboardClient() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="bg-secondary/30 text-left">
@@ -185,6 +186,7 @@ export function DashboardClient() {
                   )}
                 </tbody>
               </table>
+              </div>
             </CardContent>
           </Card>
         </div>

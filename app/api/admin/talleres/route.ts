@@ -62,6 +62,11 @@ export async function POST(req: NextRequest) {
     const exists = await prisma.taller.findUnique({ where: { slug } });
     if (exists) return NextResponse.json({ error: `Ya existe un taller con slug "${slug}"` }, { status: 409 });
 
+    if (body.rut?.trim()) {
+      const rutExists = await prisma.taller.findFirst({ where: { rut: body.rut.trim() } });
+      if (rutExists) return NextResponse.json({ error: `Ya existe un taller con RUT "${body.rut.trim()}"` }, { status: 409 });
+    }
+
     const taller = await prisma.taller.create({
       data: {
         nombre: body.nombre.trim(),

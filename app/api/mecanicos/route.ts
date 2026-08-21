@@ -29,7 +29,13 @@ export async function POST(req: NextRequest) {
   if (!body?.nombre?.trim()) return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 });
 
   const mecanico = await prisma.mecanico.create({
-    data: { nombre: body.nombre.trim(), tallerId: scope.tallerId ?? undefined },
+    data: {
+      nombre: body.nombre.trim(),
+      rut: body.rut?.trim() || null,
+      telefono: body.telefono?.trim() || null,
+      email: body.email?.trim() || null,
+      tallerId: scope.tallerId ?? undefined,
+    },
   });
   return NextResponse.json(mecanico, { status: 201 });
 }
@@ -49,6 +55,9 @@ export async function PATCH(req: NextRequest) {
   const data: any = {};
   if (body.nombre !== undefined) data.nombre = body.nombre.trim();
   if (body.activo !== undefined) data.activo = body.activo;
+  if (body.rut !== undefined) data.rut = body.rut?.trim() || null;
+  if (body.telefono !== undefined) data.telefono = body.telefono?.trim() || null;
+  if (body.email !== undefined) data.email = body.email?.trim() || null;
 
   const updated = await prisma.mecanico.update({ where: { id: body.id }, data });
   return NextResponse.json(updated);

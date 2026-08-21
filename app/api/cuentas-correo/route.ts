@@ -30,10 +30,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+    if (!body?.nombre?.trim()) return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 });
+    const emailRaw = body?.email?.trim() ?? '';
+    if (!emailRaw || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) {
+      return NextResponse.json({ error: 'Email inválido' }, { status: 400 });
+    }
     const cuenta = await prisma.cuentaCorreo.create({
       data: {
-        nombre: body?.nombre ?? '',
-        email: body?.email ?? '',
+        nombre: body.nombre.trim(),
+        email: emailRaw,
         predeterminada: body?.predeterminada ?? false,
         tallerId: scope.tallerId ?? undefined,
       },
