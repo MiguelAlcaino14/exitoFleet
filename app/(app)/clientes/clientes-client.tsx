@@ -17,6 +17,7 @@ export function ClientesClient() {
   const [clientes, setClientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState<string>('');
   const [page, setPage] = useState(1);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteName, setDeleteName] = useState('');
@@ -40,14 +41,16 @@ export function ClientesClient() {
 
   const clientesFiltrados = useMemo(() => {
     const q = filtro.toLowerCase();
-    if (!q) return clientes;
-    return (clientes ?? []).filter((c: any) =>
-      (c?.razonSocial ?? '').toLowerCase().includes(q) ||
-      (c?.rutEmpresa ?? '').toLowerCase().includes(q) ||
-      (c?.nombreContacto ?? '').toLowerCase().includes(q) ||
-      (c?.email ?? '').toLowerCase().includes(q)
-    );
-  }, [clientes, filtro]);
+    return (clientes ?? []).filter((c: any) => {
+      const matchTexto = !q ||
+        (c?.razonSocial ?? '').toLowerCase().includes(q) ||
+        (c?.rutEmpresa ?? '').toLowerCase().includes(q) ||
+        (c?.nombreContacto ?? '').toLowerCase().includes(q) ||
+        (c?.email ?? '').toLowerCase().includes(q);
+      const matchTipo = !filtroTipo || (c?.tipoCliente ?? 'EMPRESA') === filtroTipo;
+      return matchTexto && matchTipo;
+    });
+  }, [clientes, filtro, filtroTipo]);
 
   const totalPages = Math.max(1, Math.ceil(clientesFiltrados.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -55,6 +58,7 @@ export function ClientesClient() {
 
   // Reset page when filter changes
   useEffect(() => { setPage(1); }, [filtro]);
+  useEffect(() => { setPage(1); }, [filtroTipo]);
 
   const handleCrear = async () => {
     const errs: Record<string, string> = {};
@@ -71,7 +75,7 @@ export function ClientesClient() {
 
     setCreando(true); setCrearError('');
     try {
-      const res = await fetch('/api/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nuevoForm) });
+      const res = await fetch('/api/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...nuevoForm, tipoCliente: tipoCliente === 'persona' ? 'PERSONA' : 'EMPRESA' }) });
       const data = await res.json();
       if (!res.ok) { setCrearError(data.error || 'Error al crear'); setCreando(false); return; }
       setClientes(prev => [...prev, data].sort((a, b) => (a.razonSocial ?? '').localeCompare(b.razonSocial ?? '')));
@@ -111,15 +115,31 @@ export function ClientesClient() {
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight font-display">Clientes</h1>
           <div className="w-10 h-1 bg-primary mt-2 rounded-full" />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Badge variant="secondary" className="text-xs whitespace-nowrap">
             {clientesFiltrados.length} cliente{clientesFiltrados.length !== 1 ? 's' : ''}
           </Badge>
+          <div className="flex gap-1">
+            {[
+              { value: '', label: 'Todos' },
+              { value: 'EMPRESA', label: 'Empresa' },
+              { value: 'PERSONA', label: 'Persona natural' },
+            ].map(f => (
+              <button key={f.value} onClick={() => setFiltroTipo(f.value)}
+                className={`px-3 py-1.5 text-xs font-bold rounded-md transition whitespace-nowrap ${
+                  filtroTipo === f.value
+                    ? 'bg-primary text-white'
+                    : 'bg-secondary text-muted-foreground hover:text-foreground'
+                }`}>
+                {f.label}
+              </button>
+            ))}
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por nombre, RUT, contacto..."
-              className="pl-9 w-[280px]"
+              className="pl-9 w-[240px]"
               value={filtro}
               onChange={(e: any) => setFiltro(e.target.value)}
             />
@@ -156,7 +176,12 @@ export function ClientesClient() {
                         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                           <Building2 className="w-4 h-4 text-primary" />
                         </div>
-                        <span className="font-semibold text-foreground text-sm truncate">{cliente?.razonSocial}</span>
+                        <div>
+                          <span className="font-semibold text-foreground text-sm truncate">{cliente?.razonSocial}</span>
+                          {cliente?.tipoCliente === 'PERSONA' && (
+                            <span className="ml-2 text-[9px] text-purple-400 font-bold">PERSONA</span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-muted-foreground hidden sm:table-cell">{cliente?.rutEmpresa || '—'}</td>
@@ -318,7 +343,7 @@ export function ClientesClient() {
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Teléfono *</label>
                 <Input value={nuevoForm.telefono}
-                  onChange={(e: any) => { setNuevoForm({ ...nuevoForm, telefono: e.target.value }); setCrearErrores(p => ({ ...p, telefono: '' })); }}
+                  onChange={(e: any) => { setNuevoForm({ ...nuevoForm, telefono: formatTelefonoInput(e.target.value) }); setCrearErrores(p => ({ ...p, telefono: '' })); }}
                   placeholder="+56 9 1234 5678"
                   className={crearErrores.telefono ? 'border-red-500' : ''} />
                 {crearErrores.telefono && <p className="text-xs text-red-500 mt-1">{crearErrores.telefono}</p>}

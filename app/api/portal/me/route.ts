@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
     const cliente = await prisma.cliente.findUnique({
       where: { id: clienteId },
-      select: { id: true, razonSocial: true, rutEmpresa: true, giro: true, email: true, telefono: true, direccion: true, nombreContacto: true, activo: true, taller: { select: { razonSocial: true } } },
+      select: { id: true, tipoCliente: true, razonSocial: true, rutEmpresa: true, giro: true, email: true, telefono: true, direccion: true, nombreContacto: true, activo: true, taller: { select: { razonSocial: true } } },
     });
     if (!cliente) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
     if (!cliente.activo) return NextResponse.json({ error: 'Cuenta desactivada' }, { status: 401 });

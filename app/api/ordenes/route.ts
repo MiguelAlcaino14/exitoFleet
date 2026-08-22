@@ -52,6 +52,8 @@ export async function POST(req: NextRequest) {
             data: {
               rutEmpresa: nc?.rutEmpresa || null,
               razonSocial: nc?.razonSocial ?? 'Sin nombre',
+              tipoCliente: nc?.tipoCliente || 'EMPRESA',
+              giro: nc?.giro || null,
               nombreContacto: nc?.nombreContacto || null,
               email: nc?.email || null,
               telefono: nc?.telefono || null,
@@ -61,6 +63,12 @@ export async function POST(req: NextRequest) {
           });
           clienteId = cliente.id;
         }
+      }
+
+      // VIN uniqueness check
+      if (nv?.vin) {
+        const vinExisting = await prisma.vehiculo.findFirst({ where: { vin: nv.vin } });
+        if (vinExisting) return NextResponse.json({ error: `El VIN ${nv.vin} ya está registrado en el vehículo ${vinExisting.patente}` }, { status: 409 });
       }
 
       const vehiculo = await prisma.vehiculo.create({

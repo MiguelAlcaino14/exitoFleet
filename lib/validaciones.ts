@@ -58,7 +58,7 @@ export function validarPatente(patente: string): boolean {
 }
 
 export function formatPatenteInput(raw: string): string {
-  const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
   const letras = clean.replace(/\d/g, '');
   const numeros = clean.replace(/[A-Z]/g, '');
   if (!letras && !numeros) return '';

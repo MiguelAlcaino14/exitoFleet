@@ -76,8 +76,8 @@ export default function PortalOTDetalle() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="bg-card border-b border-border px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center gap-4">
+      <header className="bg-card border-b border-border">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center gap-4">
           <Link href="/portal" className="text-muted-foreground hover:text-foreground transition">
             <ArrowLeft className="w-5 h-5" />
           </Link>

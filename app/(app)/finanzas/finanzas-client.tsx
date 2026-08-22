@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { DollarSign, TrendingUp, FileText, BarChart3, Plus, X, Receipt, CalendarDays, ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { DollarSign, TrendingUp, FileText, BarChart3, Plus, X, Receipt, CalendarDays, ChevronDown, ChevronRight, ChevronLeft, Search, Download, Printer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,8 @@ export function FinanzasClient() {
   const [facturas, setFacturas] = useState<any[]>([]);
   const [filtroFactura, setFiltroFactura] = useState('');
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
+  const [facturaPage, setFacturaPage] = useState(1);
+  const FACTURAS_PAGE_SIZE = 10;
 
   const facturasFiltradas = useMemo(() => {
     const q = filtroFactura.trim().toLowerCase();
@@ -47,9 +49,73 @@ export function FinanzasClient() {
   };
 
   useEffect(() => { cargar(); }, []);
+  useEffect(() => { setFacturaPage(1); }, [filtroFactura]);
+
+  const facturasTotalPages = Math.max(1, Math.ceil(facturasFiltradas.length / FACTURAS_PAGE_SIZE));
+  const facturasPaginadas = facturasFiltradas.slice((facturaPage - 1) * FACTURAS_PAGE_SIZE, facturaPage * FACTURAS_PAGE_SIZE);
+
+  const exportarCSVFacturas = () => {
+    const headers = ['N° Factura', 'OT', 'Patente', 'Cliente', 'Monto Neto', 'IVA', 'Total', 'Fecha'];
+    const rows = facturasFiltradas.map((f: any) => [
+      f.numero,
+      `OT-${String(f.ordenTrabajo?.otNumero ?? '').padStart(4, '0')}`,
+      f.ordenTrabajo?.vehiculo?.patente ?? '',
+      f.ordenTrabajo?.vehiculo?.cliente?.razonSocial ?? '',
+      f.montoNeto ?? 0,
+      f.iva ?? 0,
+      f.montoTotal ?? 0,
+      new Date(f.fechaEmision).toLocaleDateString('es-CL', { timeZone: 'UTC' }),
+    ]);
+    const csv = [headers, ...rows].map(r => r.map((c: any) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'facturas.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const imprimirReporte = (tipo: 'mensual' | 'anual') => {
+    const filas = tipo === 'mensual'
+      ? (data?.resumenMensual ?? []).map((m: any) => {
+          const [y, mo] = m.periodo.split('-');
+          return `<tr><td>${MESES[parseInt(mo) - 1]} ${y}</td><td>${m.count}</td><td>${formatCLP(m.neto ?? 0)}</td><td>${formatCLP(m.iva ?? 0)}</td><td><strong>${formatCLP(m.total ?? 0)}</strong></td></tr>`;
+        }).join('')
+      : (data?.resumenAnual ?? []).map((a: any) =>
+          `<tr><td>${a.anio}</td><td>${a.count}</td><td>${formatCLP(a.neto ?? 0)}</td><td>${formatCLP(a.iva ?? 0)}</td><td><strong>${formatCLP(a.total ?? 0)}</strong></td></tr>`
+        ).join('');
+
+    const titulo = tipo === 'mensual' ? 'Facturación Mensual' : 'Facturación Anual';
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titulo}</title>
+      <style>body{font-family:sans-serif;padding:24px;color:#111}h2{margin-bottom:16px}
+      table{width:100%;border-collapse:collapse}th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #e5e7eb}
+      th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;background:#f9fafb}
+      @media print{button{display:none}}</style></head>
+      <body><h2>${titulo}</h2>
+      <table><thead><tr><th>Período</th><th>Facturas</th><th>Neto</th><th>IVA</th><th>Total</th></tr></thead>
+      <tbody>${filas}</tbody></table>
+      <script>window.onload=()=>window.print()</script></body></html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+  };
+
+  const exportarCSVMensual = () => {
+    const headers = ['Período', 'Facturas', 'Neto', 'IVA', 'Total'];
+    const rows = (data?.resumenMensual ?? []).map((m: any) => {
+      const [y, mo] = m.periodo.split('-');
+      return [`${MESES[parseInt(mo) - 1]} ${y}`, m.count, m.neto ?? 0, m.iva ?? 0, m.total ?? 0];
+    });
+    const csv = [headers, ...rows].map(r => r.map((c: any) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'facturacion-mensual.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const crearFactura = async () => {
     if (!facturaForm.numero || !facturaForm.otId) { toast.error('Número de factura y OT son requeridos'); return; }
+    if (!facturaForm.montoNeto || parseFloat(facturaForm.montoNeto) <= 0) { toast.error('Monto neto es requerido y debe ser mayor a 0'); return; }
     setSaving(true);
     try {
       const res = await fetch('/api/facturas', {
@@ -147,7 +213,7 @@ export function FinanzasClient() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">MONTO NETO (sin IVA)</label>
-                    <Input type="number" placeholder="Monto neto" value={facturaForm.montoNeto} onChange={(e) => setFacturaForm({ ...facturaForm, montoNeto: e.target.value })} />
+                    <Input type="number" placeholder="Monto neto" value={facturaForm.montoNeto} onChange={(e) => setFacturaForm({ ...facturaForm, montoNeto: e.target.value })} className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" onWheel={(e: any) => e.target.blur()} />
                     {facturaForm.montoNeto && (
                       <div className="text-[10px] text-muted-foreground mt-1">
                         IVA (19%): {formatCLP(Math.round(parseFloat(facturaForm.montoNeto) * 0.19))} — Total: {formatCLP(Math.round(parseFloat(facturaForm.montoNeto) * 1.19))}
@@ -215,6 +281,14 @@ export function FinanzasClient() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
             <CalendarDays className="w-4 h-4 text-primary" /> Facturación Mensual
+            <div className="ml-auto flex gap-1">
+              <Button size="sm" variant="outline" onClick={() => imprimirReporte('mensual')} className="text-xs h-7 px-2">
+                <Printer className="w-3 h-3 mr-1" /> Imprimir
+              </Button>
+              <Button size="sm" variant="outline" onClick={exportarCSVMensual} className="text-xs h-7 px-2">
+                <Download className="w-3 h-3 mr-1" /> CSV
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -260,6 +334,9 @@ export function FinanzasClient() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-primary" /> Facturación Anual
+              <Button size="sm" variant="outline" onClick={() => imprimirReporte('anual')} className="ml-auto text-xs h-7 px-2">
+                <Printer className="w-3 h-3 mr-1" /> Imprimir
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -295,6 +372,9 @@ export function FinanzasClient() {
           <CardTitle className="text-sm font-bold flex items-center gap-2">
             <Receipt className="w-4 h-4 text-primary" /> Últimas Facturas Emitidas
             <Badge variant="secondary" className="text-[10px] ml-auto">{facturasFiltradas.length}</Badge>
+            <Button size="sm" variant="outline" onClick={exportarCSVFacturas} disabled={facturasFiltradas.length === 0} className="text-xs h-7 px-2">
+              <Download className="w-3 h-3 mr-1" /> Exportar
+            </Button>
           </CardTitle>
           <div className="relative mt-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -320,7 +400,7 @@ export function FinanzasClient() {
               </tr>
             </thead>
             <tbody>
-              {facturasFiltradas.length > 0 ? facturasFiltradas.map((f: any) => (
+              {facturasPaginadas.length > 0 ? facturasPaginadas.map((f: any) => (
                 <tr key={f.id} className="border-t border-border hover:bg-secondary/10 transition cursor-pointer" onClick={() => window.location.href = `/ot/${f.ordenTrabajo?.id ?? f.otId}`}>
                   <td className="px-5 py-3 text-sm font-bold text-foreground">{f.numero}</td>
                   <td className="px-5 py-3 text-sm font-mono text-muted-foreground">OT-{String(f.ordenTrabajo?.otNumero ?? '').padStart(4, '0')}</td>
@@ -335,6 +415,19 @@ export function FinanzasClient() {
             </tbody>
           </table>
           </div>
+          {facturasTotalPages > 1 && (
+            <div className="flex items-center justify-between px-5 py-3 border-t border-border">
+              <span className="text-xs text-muted-foreground">Página {facturaPage} de {facturasTotalPages} · {facturasFiltradas.length} facturas</span>
+              <div className="flex gap-1">
+                <Button variant="outline" size="icon" className="h-8 w-8" disabled={facturaPage <= 1} onClick={() => setFacturaPage(p => p - 1)}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" disabled={facturaPage >= facturasTotalPages} onClick={() => setFacturaPage(p => p + 1)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -104,7 +104,7 @@ export function MobileSidebar({ user }: MobileSidebarProps) {
               </div>
               <Button
                 size="sm"
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                className="w-full bg-[hsl(217,74%,45%)] text-white hover:bg-[hsl(217,74%,45%)]/90"
                 onClick={() => signOut({ callbackUrl: '/auth/login' })}
               >
                 <LogOut className="w-4 h-4" />

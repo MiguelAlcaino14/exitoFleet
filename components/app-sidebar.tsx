@@ -120,7 +120,7 @@ export function AppSidebar({ user }: SidebarProps) {
           </div>
           <Button
             size={collapsed ? 'icon' : 'sm'}
-            className="w-full mt-2 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="w-full mt-2 bg-[hsl(217,74%,45%)] text-white hover:bg-[hsl(217,74%,45%)]/90"
             onClick={() => signOut({ callbackUrl: '/auth/login' })}
           >
             <LogOut className="w-4 h-4" />

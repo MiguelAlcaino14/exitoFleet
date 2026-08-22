@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { validarEmail, validarTelefono, validarRut, formatRutInput, formatTelefonoInput } from '@/lib/validaciones';
-import { Building2, Mail, Plus, Trash2, Star, Loader2, Users, Shield, Eye, EyeOff, Save, UserPlus, ToggleLeft, ToggleRight, Wrench, Pencil, Search, X } from 'lucide-react';
+import { Building2, Mail, Plus, Trash2, Star, Loader2, Users, Shield, Eye, EyeOff, Save, UserPlus, ToggleLeft, ToggleRight, Wrench, Pencil, Search, X, Key, ShieldCheck, ShieldOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,12 +57,27 @@ export function ConfiguracionClient() {
   const [mecTelefono, setMecTelefono] = useState('');
   const [mecEmail, setMecEmail] = useState('');
   const [mecError, setMecError] = useState('');
+  // Editar usuario
+  const [editUserId, setEditUserId] = useState<string | null>(null);
+  const [editUserNombre, setEditUserNombre] = useState('');
+  const [editUserEmail, setEditUserEmail] = useState('');
+  const [editUserSaving, setEditUserSaving] = useState(false);
   // Eliminar usuario
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [deletingUser, setDeletingUser] = useState(false);
 
+  // Acceso portal clientes
+  const [clientesPortal, setClientesPortal] = useState<any[]>([]);
+  const [clientesPortalLoading, setClientesPortalLoading] = useState(false);
+  const [buscarCliente, setBuscarCliente] = useState('');
+  const [clienteSeleccionado, setClienteSeleccionado] = useState<any>(null);
+  const [portalPassword, setPortalPassword] = useState('');
+  const [showPortalPw, setShowPortalPw] = useState(false);
+  const [portalSaving, setPortalSaving] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+
   // Tab activo
-  const [seccion, setSeccion] = useState<'empresa' | 'correo' | 'usuarios' | 'mecanicos'>('empresa');
+  const [seccion, setSeccion] = useState<'empresa' | 'correo' | 'usuarios' | 'mecanicos' | 'clientes'>('empresa');
 
   const usuariosFiltrados = useMemo(() => {
     const q = filtroUsuario.trim().toLowerCase();
@@ -99,6 +114,20 @@ export function ConfiguracionClient() {
       await fetchMecanicos();
     } else { const d = await res.json(); setMecError(d.error || 'Error al crear mecánico'); }
     setMecanicoSaving(false);
+  };
+
+  const guardarEditUsuario = async () => {
+    if (!editUserId) return;
+    if (!editUserNombre.trim()) { toast.error('Nombre requerido'); return; }
+    if (!validarEmail(editUserEmail)) { toast.error('Email inválido'); return; }
+    setEditUserSaving(true);
+    try {
+      const res = await fetch('/api/usuarios', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editUserId, nombre: editUserNombre.trim(), email: editUserEmail.trim() }) });
+      if (!res.ok) { const d = await res.json(); toast.error(d.error || 'Error al actualizar'); return; }
+      setUsuarios(prev => prev.map(u => u.id === editUserId ? { ...u, nombre: editUserNombre.trim(), email: editUserEmail.trim() } : u));
+      toast.success('Usuario actualizado');
+      setEditUserId(null);
+    } catch { toast.error('Error de conexión'); } finally { setEditUserSaving(false); }
   };
 
   const eliminarUsuario = async () => {
@@ -142,6 +171,7 @@ export function ConfiguracionClient() {
     if (empresa.rut?.trim() && !validarRut(empresa.rut)) { toast.error('RUT del taller inválido — formato: 12.345.678-9'); return; }
     if (empresa.telefono?.trim() && !validarTelefono(empresa.telefono)) { toast.error('Teléfono inválido — solo dígitos, 8-15 caracteres'); return; }
     if (empresa.celular?.trim() && !validarTelefono(empresa.celular)) { toast.error('Celular inválido — solo dígitos, 8-15 caracteres'); return; }
+    if (empresa.email?.trim() && !validarEmail(empresa.email)) { toast.error('Email de contacto inválido'); return; }
     setEmpresaSaving(true);
     try {
       const res = await fetch('/api/configuracion-taller', {
@@ -163,9 +193,9 @@ export function ConfiguracionClient() {
         body: JSON.stringify({ nombre, email, predeterminada: cuentas.length === 0 }),
       });
       if (!res.ok) { const err = await res.json(); toast.error(err.error || 'Error al agregar cuenta'); return; }
+      const newCuenta = await res.json();
       setNombre(''); setEmail('');
-      const r = await fetch('/api/cuentas-correo').then(r => r.json());
-      setCuentas(Array.isArray(r) ? r : []);
+      setCuentas(prev => [...prev, newCuenta]);
       toast.success('Cuenta agregada');
     } catch { toast.error('Error de conexión'); }
     setCuentaSaving(false);
@@ -222,11 +252,52 @@ export function ConfiguracionClient() {
     } catch { toast.error('Error'); }
   };
 
+  const cargarClientesPortal = async () => {
+    setClientesPortalLoading(true);
+    const r = await fetch('/api/clientes').then(r => r.json()).catch(() => []);
+    setClientesPortal(r ?? []);
+    setClientesPortalLoading(false);
+  };
+
+  const darAccesoPortal = async () => {
+    if (!clienteSeleccionado) { toast.error('Selecciona un cliente'); return; }
+    if (portalPassword.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
+    setPortalSaving(true);
+    try {
+      const res = await fetch('/api/portal/admin-access', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clienteId: clienteSeleccionado.id, password: portalPassword }),
+      });
+      const d = await res.json();
+      if (!res.ok) { toast.error(d.error || 'Error'); return; }
+      toast.success(`Acceso portal activado. El cliente puede ingresar con su RUT y la contraseña asignada.`);
+      setClienteSeleccionado(null); setPortalPassword(''); setBuscarCliente('');
+      await cargarClientesPortal();
+    } catch { toast.error('Error de conexión'); } finally { setPortalSaving(false); }
+  };
+
+  const revocarAcceso = async (clienteId: string) => {
+    setRevokingId(clienteId);
+    try {
+      await fetch(`/api/portal/admin-access?clienteId=${clienteId}`, { method: 'DELETE' });
+      toast.success('Acceso portal revocado');
+      await cargarClientesPortal();
+    } catch { toast.error('Error'); } finally { setRevokingId(null); }
+  };
+
+  const clientesPortalFiltrados = useMemo(() => {
+    const q = buscarCliente.toLowerCase();
+    return (clientesPortal ?? []).filter((c: any) =>
+      !q || (c.razonSocial ?? '').toLowerCase().includes(q) || (c.rutEmpresa ?? '').toLowerCase().includes(q)
+    );
+  }, [clientesPortal, buscarCliente]);
+
   const secciones = [
     { id: 'empresa' as const, label: 'Datos del Taller', icon: Building2 },
     { id: 'correo' as const, label: 'Cuentas de Correo', icon: Mail },
     { id: 'usuarios' as const, label: 'Usuarios', icon: Users },
     { id: 'mecanicos' as const, label: 'Mecánicos', icon: Wrench },
+    { id: 'clientes' as const, label: 'Acceso Portal', icon: Key },
   ];
 
   return (
@@ -237,9 +308,9 @@ export function ConfiguracionClient() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-secondary/20 p-1 rounded-lg">
+      <div className="flex gap-1 mb-6 bg-secondary/20 p-1 rounded-lg flex-wrap">
         {secciones.map(s => (
-          <button key={s.id} onClick={() => setSeccion(s.id)}
+          <button key={s.id} onClick={() => { setSeccion(s.id); if (s.id === 'clientes' && clientesPortal.length === 0) cargarClientesPortal(); }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-bold transition flex-1 justify-center ${
               seccion === s.id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
             }`}>
@@ -298,7 +369,7 @@ export function ConfiguracionClient() {
                 </div>
                 <Button onClick={guardarEmpresa} disabled={empresaSaving} className="font-bold text-xs tracking-wider mt-2">
                   {empresaSaving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
-                  GUARDAR DATOS
+                  Guardar datos
                 </Button>
               </div>
             )}
@@ -449,23 +520,40 @@ export function ConfiguracionClient() {
                 {usuariosFiltrados.map((u: any) => (
                   <div key={u.id}
                     className={`flex items-center justify-between p-4 rounded-lg border border-border ${u.activo ? 'bg-secondary/10' : 'bg-secondary/5 opacity-60'}`}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black ${
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0 ${
                         u.activo ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
                       }`}>
-                        {u.nombre?.charAt(0)?.toUpperCase()}
+                        {(editUserId === u.id ? editUserNombre : u.nombre)?.charAt(0)?.toUpperCase()}
                       </div>
-                      <div>
-                        <div className="font-bold text-foreground text-sm">{u.nombre}</div>
-                        <div className="text-muted-foreground text-xs">{u.email}</div>
-                      </div>
-                      <Badge className={`text-[9px] ml-1 ${ROLES[u.rol]?.color ?? ''}`}>
-                        <Shield className="w-3 h-3 mr-1" />
-                        {ROLES[u.rol]?.label ?? u.rol}
-                      </Badge>
-                      {!u.activo && <Badge variant="destructive" className="text-[9px]">Inactivo</Badge>}
+                      {editUserId === u.id ? (
+                        <div className="flex items-center gap-2 flex-1 flex-wrap">
+                          <Input value={editUserNombre} onChange={e => setEditUserNombre(e.target.value)} className="h-8 text-sm w-40" placeholder="Nombre" />
+                          <Input value={editUserEmail} onChange={e => setEditUserEmail(e.target.value)} className="h-8 text-sm w-48" placeholder="Email" type="email" />
+                          <Button size="sm" onClick={guardarEditUsuario} disabled={editUserSaving} className="h-8 text-xs">
+                            {editUserSaving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />} Guardar
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditUserId(null)} className="h-8 text-xs">Cancelar</Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div>
+                            <div className="font-bold text-foreground text-sm">{u.nombre}</div>
+                            <div className="text-muted-foreground text-xs">{u.email}</div>
+                          </div>
+                          <Badge className={`text-[9px] ml-1 ${ROLES[u.rol]?.color ?? ''}`}>
+                            <Shield className="w-3 h-3 mr-1" />
+                            {ROLES[u.rol]?.label ?? u.rol}
+                          </Badge>
+                          {!u.activo && <Badge variant="destructive" className="text-[9px]">Inactivo</Badge>}
+                        </>
+                      )}
                     </div>
+                    {editUserId !== u.id && (
                     <div className="flex items-center gap-2">
+                      <button onClick={() => { setEditUserId(u.id); setEditUserNombre(u.nombre); setEditUserEmail(u.email); }} className="text-muted-foreground hover:text-foreground" title="Editar usuario">
+                        <Pencil className="w-4 h-4" />
+                      </button>
                       <select value={u.rol} onChange={e => cambiarRol(u.id, e.target.value)}
                         className="bg-background border border-border rounded px-2 py-1 text-xs text-foreground">
                         {Object.entries(ROLES).map(([key, val]) => (
@@ -479,6 +567,7 @@ export function ConfiguracionClient() {
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -580,6 +669,126 @@ export function ConfiguracionClient() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ═══ ACCESO PORTAL CLIENTES ═══ */}
+      {seccion === 'clientes' && (
+        <div className="space-y-6">
+          {/* Dar nuevo acceso */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-primary" /> Dar acceso al portal
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">El cliente podrá ingresar al portal con su RUT y la contraseña que asignes aquí.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Buscar cliente */}
+              <div>
+                <Label className="text-xs font-bold">Buscar cliente</Label>
+                <Input
+                  className="mt-1"
+                  placeholder="Nombre o RUT"
+                  value={buscarCliente}
+                  onChange={e => { setBuscarCliente(e.target.value); setClienteSeleccionado(null); }}
+                />
+              </div>
+              {/* Lista filtrada (si hay búsqueda y no hay seleccionado) */}
+              {buscarCliente.length >= 2 && !clienteSeleccionado && (
+                <div className="border border-border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                  {clientesPortalFiltrados.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">Sin resultados</p>
+                  ) : clientesPortalFiltrados.slice(0, 10).map((c: any) => (
+                    <button key={c.id} type="button"
+                      onClick={() => { setClienteSeleccionado(c); setBuscarCliente(c.razonSocial); }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-secondary/50 flex items-center justify-between gap-3 border-b border-border last:border-0 transition">
+                      <div>
+                        <p className="text-sm font-medium">{c.razonSocial}</p>
+                        <p className="text-xs text-muted-foreground">{c.rutEmpresa || c.email || '—'}</p>
+                      </div>
+                      {c.passwordHash && <span title="Ya tiene acceso"><ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" /></span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Cliente seleccionado */}
+              {clienteSeleccionado && (
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">{clienteSeleccionado.razonSocial}</p>
+                    <p className="text-xs text-muted-foreground">{clienteSeleccionado.rutEmpresa || clienteSeleccionado.email || '—'}</p>
+                    {!clienteSeleccionado.email && (
+                      <p className="text-xs text-amber-500 mt-1">Sin email registrado — el cliente necesita email para ingresar al portal</p>
+                    )}
+                  </div>
+                  <button type="button" onClick={() => { setClienteSeleccionado(null); setBuscarCliente(''); }} className="text-muted-foreground hover:text-foreground">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              {/* Contraseña */}
+              {clienteSeleccionado && (
+                <div>
+                  <Label className="text-xs font-bold">Contraseña de acceso</Label>
+                  <div className="relative mt-1">
+                    <Input
+                      type={showPortalPw ? 'text' : 'password'}
+                      value={portalPassword}
+                      onChange={e => setPortalPassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                      className="pr-10"
+                    />
+                    <button type="button" onClick={() => setShowPortalPw(p => !p)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showPortalPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">El cliente usará su RUT y esta contraseña para entrar al portal.</p>
+                </div>
+              )}
+              <Button onClick={darAccesoPortal} disabled={portalSaving || !clienteSeleccionado || !portalPassword}>
+                {portalSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
+                {clienteSeleccionado?.passwordHash ? 'Actualizar contraseña' : 'Dar acceso al portal'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Clientes con acceso activo */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" /> Clientes con acceso activo
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {clientesPortalLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm py-4">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Cargando...
+                </div>
+              ) : (() => {
+                const conAcceso = (clientesPortal ?? []).filter((c: any) => c.passwordHash);
+                if (conAcceso.length === 0) return <p className="text-sm text-muted-foreground py-4">Ningún cliente tiene acceso al portal aún.</p>;
+                return (
+                  <div className="divide-y divide-border">
+                    {conAcceso.map((c: any) => (
+                      <div key={c.id} className="flex items-center justify-between py-3">
+                        <div>
+                          <p className="text-sm font-medium">{c.razonSocial}</p>
+                          <p className="text-xs text-muted-foreground">{c.rutEmpresa || '—'} · {c.email || 'sin email'}</p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => revocarAcceso(c.id)} disabled={revokingId === c.id}
+                          className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10">
+                          {revokingId === c.id ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <ShieldOff className="w-3 h-3 mr-1" />}
+                          Revocar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
         </div>
       )}
 

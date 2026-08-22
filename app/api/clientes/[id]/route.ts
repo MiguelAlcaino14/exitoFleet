@@ -104,6 +104,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!cliente) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
 
     const data: any = {};
+    if (body?.tipoCliente !== undefined && ['EMPRESA', 'PERSONA'].includes(body.tipoCliente)) data.tipoCliente = body.tipoCliente;
     if (body?.razonSocial !== undefined) data.razonSocial = body.razonSocial;
     if (body?.rutEmpresa !== undefined) data.rutEmpresa = body.rutEmpresa || null;
     if (body?.giro !== undefined) data.giro = body.giro || null;

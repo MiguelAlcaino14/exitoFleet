@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
         include: {
           vehiculo: { include: { cliente: { select: { razonSocial: true } } } },
           usuarioCreador: { select: { nombre: true } },
+          mecanico: { select: { nombre: true } },
           _count: { select: { itemsValorizacion: true, fotografias: true } },
         },
         orderBy: { otNumero: 'desc' },

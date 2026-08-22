@@ -88,6 +88,7 @@ model User {
 
 model Cliente {
   id              String    @id @default(cuid())
+  tipoCliente     String    @default("EMPRESA")
   rutEmpresa      String?   @unique
   razonSocial     String
   giro            String?
@@ -165,7 +166,7 @@ model Vehiculo {
   anio            Int?
   motor           String?
   chasis          String?
-  vin             String?
+  vin             String?   @unique
   clienteId       String
   cliente         Cliente   @relation(fields: [clienteId], references: [id])
   tallerId        String?

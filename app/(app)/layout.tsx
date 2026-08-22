@@ -34,15 +34,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             Tu cuenta no tiene un taller asignado. Contacta al Super Admin para que te vincule desde el Panel Admin.
           </div>
         )}
-        <div className="print:hidden flex items-center justify-end px-4 md:px-6 pt-4 pb-0">
-          <div className="md:hidden w-10" />
-          <div className="flex-1" />
-          <div className="flex items-center gap-2">
+        <header className="print:hidden sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border">
+          <div className="flex items-center px-4 md:px-6 py-3 gap-2">
+            <div className="md:hidden w-10 flex-shrink-0" />
+            <div className="flex-1" />
             <ThemeToggleButton />
             <GlobalSearch />
             <NotificationsBell />
           </div>
-        </div>
+        </header>
         {children}
       </main>
     </div>

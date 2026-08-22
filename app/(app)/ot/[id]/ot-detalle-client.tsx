@@ -89,6 +89,12 @@ export function OTDetalleClient({ otId }: { otId: string }) {
 
   // Mecánicos
   const [mecanicos, setMecanicos] = useState<any[]>([]);
+  const [editMecanico, setEditMecanico] = useState(false);
+  const [nuevoMecanicoId, setNuevoMecanicoId] = useState('');
+  const [savingMecanico, setSavingMecanico] = useState(false);
+  const [showCrearMecInline, setShowCrearMecInline] = useState(false);
+  const [mecNombreInline, setMecNombreInline] = useState('');
+  const [creandoMecInline, setCreandoMecInline] = useState(false);
 
   // Fotos
   const [fotos, setFotos] = useState<any[]>([]);
@@ -275,6 +281,41 @@ export function OTDetalleClient({ otId }: { otId: string }) {
       toast.error('Error al guardar diagnóstico');
     }
     setSaving(false);
+  };
+
+  const cambiarMecanico = async () => {
+    if (!nuevoMecanicoId) return;
+    setSavingMecanico(true);
+    try {
+      await fetch(`/api/ordenes/${otId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mecanicoId: nuevoMecanicoId }),
+      });
+      const mec = mecanicos.find((m: any) => m.id === nuevoMecanicoId);
+      await fetch(`/api/ordenes/${otId}/timeline`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: `MECÁNICO CAMBIADO A: ${mec?.nombre?.toUpperCase() ?? ''}`, tipoEvento: 'nota' }),
+      });
+      fetchOT(); fetchTimeline();
+      setEditMecanico(false);
+      toast.success('Mecánico actualizado');
+    } catch { toast.error('Error al cambiar mecánico'); }
+    setSavingMecanico(false);
+  };
+
+  const crearMecanicoInline = async () => {
+    if (!mecNombreInline.trim()) return;
+    setCreandoMecInline(true);
+    try {
+      const res = await fetch('/api/mecanicos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: mecNombreInline.trim() }) });
+      const d = await res.json();
+      if (!res.ok) { toast.error(d.error || 'Error al crear mecánico'); return; }
+      setMecanicos(prev => [...prev, d]);
+      setNuevoMecanicoId(d.id);
+      setShowCrearMecInline(false);
+      setMecNombreInline('');
+      toast.success('Mecánico creado');
+    } catch { toast.error('Error'); } finally { setCreandoMecInline(false); }
   };
 
   const cambiarEstado = async (nuevoEstado: string) => {
@@ -646,19 +687,41 @@ export function OTDetalleClient({ otId }: { otId: string }) {
               {tab === 'valorización' && (
                 <div>
                   {/* Mecánico Responsable */}
-                  <div className="mb-6 p-4 bg-secondary/30 rounded-lg border border-border flex items-center gap-4">
-                    <label className="text-[10px] font-black tracking-widest text-muted-foreground whitespace-nowrap">MECÁNICO RESPONSABLE</label>
-                    <select
-                      value={ot?.mecanicoId ?? ''}
-                      onChange={async (e) => {
-                        const val = e.target.value || null;
-                        const res = await fetch(`/api/ordenes/${otId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mecanicoId: val }) });
-                        if (res.ok) fetchOT();
-                      }}
-                      className="bg-background border border-border rounded px-3 py-2 text-sm text-foreground flex-1 max-w-[280px]">
-                      <option value="">— Sin asignar —</option>
-                      {mecanicos.map((m: any) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-                    </select>
+                  <div className="mb-6 p-4 bg-secondary/30 rounded-lg border border-border space-y-3">
+                    <div className="flex items-center gap-4">
+                      <label className="text-[10px] font-black tracking-widest text-muted-foreground whitespace-nowrap">MECÁNICO RESPONSABLE</label>
+                      <select
+                        value={ot?.mecanicoId ?? ''}
+                        onChange={async (e) => {
+                          if (e.target.value === '__nuevo__') { setShowCrearMecInline(true); return; }
+                          const val = e.target.value || null;
+                          const res = await fetch(`/api/ordenes/${otId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mecanicoId: val }) });
+                          if (res.ok) fetchOT();
+                        }}
+                        className="bg-background border border-border rounded px-3 py-2 text-sm text-foreground flex-1 max-w-[280px]">
+                        <option value="">— Sin asignar —</option>
+                        {mecanicos.map((m: any) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                        <option value="__nuevo__">+ Agregar mecánico</option>
+                      </select>
+                    </div>
+                    {showCrearMecInline && (
+                      <div className="p-2 border border-primary/30 rounded-lg bg-primary/5 space-y-1.5">
+                        <input value={mecNombreInline} onChange={e => setMecNombreInline(e.target.value)}
+                          placeholder="Nombre del mecánico"
+                          className="w-full h-7 text-xs bg-background border border-border rounded px-2 text-foreground"
+                          onKeyDown={async (e: any) => { if (e.key === 'Enter') { await crearMecanicoInline(); } }} />
+                        <div className="flex gap-1">
+                          <button onClick={crearMecanicoInline} disabled={creandoMecInline || !mecNombreInline.trim()}
+                            className="text-xs bg-primary text-white px-2 py-1 rounded disabled:opacity-50">
+                            {creandoMecInline ? 'Creando...' : 'Crear'}
+                          </button>
+                          <button onClick={() => { setShowCrearMecInline(false); setMecNombreInline(''); }}
+                            className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded">
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Diagnóstico */}
@@ -738,7 +801,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                       <Input type="number" value={margenNuevo} onChange={(e) => setMargenNuevo(e.target.value)} className="w-[70px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                     </div>
                     <Button onClick={agregarItem} className="font-bold text-xs h-9">
-                      <Plus className="w-4 h-4 mr-1" /> AGREGAR
+                      <Plus className="w-4 h-4 mr-1" /> Agregar
                     </Button>
                   </div>
 
@@ -836,7 +899,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                   {items.length > 0 && (
                     <div className="mt-5 flex justify-end">
                       <Button onClick={abrirModalEnviar} className="bg-primary hover:bg-primary/90 text-primary-foreground font-black tracking-wider px-6 py-3 text-sm">
-                        <Send className="w-4 h-4 mr-2" /> ENVIAR COTIZACIÓN
+                        <Send className="w-4 h-4 mr-2" /> Enviar cotización
                       </Button>
                     </div>
                   )}
@@ -950,7 +1013,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                   <div className="flex justify-end">
                     <Button onClick={guardarChecklist} disabled={checklistSaving} className="font-black tracking-wider text-xs">
                       {checklistSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                      GUARDAR CHECKLIST
+                      Guardar checklist
                     </Button>
                   </div>
                 </div>
@@ -1010,12 +1073,59 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                     <span className="text-sm font-bold text-foreground">{formatDateTime(ot.updatedAt)}</span>
                   </div>
                 )}
-                {ot?.mecanico && (
-                  <div>
-                    <label className="block text-[10px] text-muted-foreground font-bold mb-0.5">MECÁNICO RESPONSABLE</label>
-                    <span className="text-sm font-bold text-primary">{ot.mecanico.nombre}</span>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-[10px] text-muted-foreground font-bold mb-0.5">MECÁNICO RESPONSABLE</label>
+                  {!editMecanico ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-primary">{ot?.mecanico?.nombre ?? 'Sin asignar'}</span>
+                      <button onClick={() => { setEditMecanico(true); setNuevoMecanicoId(ot?.mecanicoId ?? ''); }}
+                        className="text-muted-foreground hover:text-foreground transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 mt-1">
+                      <select value={nuevoMecanicoId}
+                        onChange={e => {
+                          if (e.target.value === '__nuevo__') { setShowCrearMecInline(true); return; }
+                          setNuevoMecanicoId(e.target.value);
+                        }}
+                        className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-foreground">
+                        <option value="">Sin asignar</option>
+                        {mecanicos.map((m: any) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                        <option value="__nuevo__">+ Agregar mecánico</option>
+                      </select>
+                      {showCrearMecInline && (
+                        <div className="p-2 border border-primary/30 rounded-lg bg-primary/5 space-y-1.5">
+                          <input value={mecNombreInline} onChange={e => setMecNombreInline(e.target.value)}
+                            placeholder="Nombre del mecánico"
+                            className="w-full h-7 text-xs bg-background border border-border rounded px-2 text-foreground"
+                            onKeyDown={(e: any) => e.key === 'Enter' && crearMecanicoInline()} />
+                          <div className="flex gap-1">
+                            <button onClick={crearMecanicoInline} disabled={creandoMecInline || !mecNombreInline.trim()}
+                              className="text-xs bg-primary text-white px-2 py-1 rounded disabled:opacity-50">
+                              {creandoMecInline ? 'Creando...' : 'Crear'}
+                            </button>
+                            <button onClick={() => { setShowCrearMecInline(false); setMecNombreInline(''); }}
+                              className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded">
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-1">
+                        <button onClick={cambiarMecanico} disabled={savingMecanico}
+                          className="text-xs bg-primary text-white px-2 py-1 rounded-md hover:bg-primary/90 disabled:opacity-50">
+                          {savingMecanico ? 'Guardando...' : 'Guardar'}
+                        </button>
+                        <button onClick={() => { setEditMecanico(false); setShowCrearMecInline(false); setMecNombreInline(''); }}
+                          className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-md">
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 {ot?.conductorNombre && (
                   <div>
                     <label className="block text-[10px] text-muted-foreground font-bold mb-0.5">CONDUCTOR</label>
@@ -1082,7 +1192,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
             </button>
             <button onClick={abrirModalEnviar}
               className="flex items-center justify-center gap-2 h-14 rounded-lg border-2 border-primary text-primary font-black text-xs tracking-widest hover:bg-primary/10 transition">
-              <Send className="w-4 h-4" /> ENVIAR COTIZACIÓN
+              <Send className="w-4 h-4" /> Enviar cotización
             </button>
           </div>
         </div>
@@ -1200,7 +1310,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
             <Button onClick={enviarCotizacion} disabled={enviando || cuentasCorreo.length === 0}
               className="w-full font-black tracking-wider py-3 text-sm">
               {enviando ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-              {enviando ? 'ENVIANDO...' : 'ENVIAR COTIZACIÓN'}
+              {enviando ? 'Enviando...' : 'Enviar cotización'}
             </Button>
           </div>
         </DialogContent>

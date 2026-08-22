@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { validarRut, validarTelefono, validarEmail, formatRutInput, validarPatente, formatPatenteInput } from '@/lib/validaciones';
-import { Search, Truck, User, CheckCircle, Plus, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Search, Truck, User, CheckCircle, Plus, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ const COMBUSTIBLES = [
 
 const TIPOS_VEHICULO = [
   'Camión', 'Tracto Camión', 'Furgón', 'Van', 'Bus', 'Minibus',
-  'Remolque', 'Semirremolque', 'Grúa', 'Maquinaria', 'Otro',
+  'Remolque', 'Semirremolque', 'Grúa', 'Maquinaria', 'Motocicleta', 'Otro',
 ];
 
 const STEP_LABELS = ['Vehículo y Cliente', 'Datos de Ingreso', 'Checklist'];
@@ -94,6 +94,9 @@ export function NuevaOTClient() {
   const [conductorTelefono, setConductorTelefono] = useState('');
   const [mecanicoId, setMecanicoId] = useState('');
   const [mecanicos, setMecanicos] = useState<any[]>([]);
+  const [showCrearMecanico, setShowCrearMecanico] = useState(false);
+  const [nuevoMecNombre, setNuevoMecNombre] = useState('');
+  const [creandoMecanico, setCreandoMecanico] = useState(false);
 
   // New vehicle/client
   const [nvMarca, setNvMarca] = useState('');
@@ -101,10 +104,13 @@ export function NuevaOTClient() {
   const [nvAnio, setNvAnio] = useState('');
   const [nvTipo, setNvTipo] = useState('');
   const [nvVin, setNvVin] = useState('');
+  const [ncTipoCliente, setNcTipoCliente] = useState<'EMPRESA' | 'PERSONA'>('EMPRESA');
   const [ncRazonSocial, setNcRazonSocial] = useState('');
   const [ncRut, setNcRut] = useState('');
+  const [ncGiro, setNcGiro] = useState('');
   const [ncEmail, setNcEmail] = useState('');
   const [ncTelefono, setNcTelefono] = useState('');
+  const [ncDireccion, setNcDireccion] = useState('');
 
   // Checklist
   const [checklist, setChecklist] = useState({
@@ -122,17 +128,23 @@ export function NuevaOTClient() {
     }
   }, [wizardStep]);
 
-  // Sugerencias de patente al escribir
+  // Búsqueda en tiempo real + sugerencias
   useEffect(() => {
+    setBuscarMsg('');
     if (patente.length < 2) { setSugerencias([]); setShowSugerencias(false); return; }
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(`/api/vehiculos?buscar=${encodeURIComponent(patente)}&page=1`);
         const data = await res.json();
-        setSugerencias((data.vehiculos ?? []).slice(0, 5));
-        setShowSugerencias((data.vehiculos ?? []).length > 0);
+        const lista = data.vehiculos ?? [];
+        setSugerencias(lista.slice(0, 5));
+        setShowSugerencias(lista.length > 0);
+        // Si patente válida (6+ chars) y no hay coincidencias → mostrar mensaje
+        if (patente.replace(/[^a-zA-Z0-9]/g, '').length >= 6 && lista.length === 0) {
+          setBuscarMsg('Vehículo no registrado. Puedes registrarlo como nuevo.');
+        }
       } catch { setSugerencias([]); }
-    }, 300);
+    }, 350);
     return () => clearTimeout(timer);
   }, [patente]);
 
@@ -161,6 +173,7 @@ export function NuevaOTClient() {
 
   const buscarPatente = async () => {
     if (!patente.trim()) { toast.error('Ingresa una patente'); return; }
+    if (patente.replace(/[^a-zA-Z0-9]/g, '').length < 6) { toast.error('La patente debe tener al menos 6 caracteres'); return; }
     if (!validarPatente(patente)) { toast.error('Patente inválida — formato: ABCD-12, AB-1234 o A-1234'); return; }
     setBuscando(true);
     setBuscarMsg('');
@@ -184,6 +197,10 @@ export function NuevaOTClient() {
   };
 
   const iniciarNuevoVehiculo = () => {
+    if (patente.replace(/[^a-zA-Z0-9]/g, '').length < 6) {
+      toast.error('Ingresa al menos 6 caracteres de patente antes de registrar');
+      return;
+    }
     setEsNuevo(true);
     setVehiculo(null);
     setWizardStep(1);
@@ -198,10 +215,15 @@ export function NuevaOTClient() {
     if (!nvModelo.trim()) errs.modelo = 'Modelo requerido';
     if (!nvAnio) errs.anio = 'Año requerido';
     if (!nvTipo) errs.tipo = 'Tipo requerido';
+    if (!nvVin.trim()) errs.vin = 'VIN / N° Chasis requerido';
     if (!ncRazonSocial.trim()) errs.razonSocial = 'Razón social requerida';
-    if (ncRut.trim() && !validarRut(ncRut)) errs.rut = 'RUT inválido — formato: 12.345.678-9';
-    if (ncEmail.trim() && !validarEmail(ncEmail)) errs.email = 'Email inválido';
+    if (!ncRut.trim()) errs.rut = 'RUT requerido';
+    else if (!validarRut(ncRut)) errs.rut = 'RUT inválido — formato: 12.345.678-9';
+    if (!ncGiro.trim()) errs.giro = 'Giro requerido';
+    if (!ncEmail.trim()) errs.email = 'Email requerido';
+    else if (!validarEmail(ncEmail)) errs.email = 'Email inválido';
     if (ncTelefono.trim() && !validarTelefono(ncTelefono)) errs.telefono = 'Teléfono inválido';
+    if (ncTipoCliente === 'EMPRESA' && !ncDireccion.trim()) errs.direccion = 'Dirección requerida';
     setErrores1(errs);
     return Object.keys(errs).length === 0;
   };
@@ -250,6 +272,22 @@ export function NuevaOTClient() {
   const nombreConductorFinal = conductorMismoDatos ? (vehiculo?.cliente?.razonSocial ?? ncRazonSocial) : conductorNombre;
   const telConductorFinal = conductorMismoDatos ? (vehiculo?.cliente?.telefono ?? ncTelefono) : conductorTelefono;
 
+  const crearMecanicoInline = async () => {
+    if (!nuevoMecNombre.trim()) return;
+    setCreandoMecanico(true);
+    try {
+      const res = await fetch('/api/mecanicos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: nuevoMecNombre.trim() }) });
+      const d = await res.json();
+      if (!res.ok) { toast.error(d.error || 'Error al crear mecánico'); return; }
+      setMecanicos(prev => [...prev, d]);
+      setMecanicoId(d.id);
+      setErrores2(p => ({ ...p, mecanico: '' }));
+      setShowCrearMecanico(false);
+      setNuevoMecNombre('');
+      toast.success('Mecánico creado');
+    } catch { toast.error('Error'); } finally { setCreandoMecanico(false); }
+  };
+
   const crearOT = async () => {
     if (!validateStep3()) return;
     setSubmitting(true);
@@ -272,7 +310,7 @@ export function NuevaOTClient() {
           patente: patente.toUpperCase().trim(),
           marca: nvMarca, modelo: nvModelo, anio: nvAnio,
           tipoVehiculo: nvTipo, vin: nvVin,
-          nuevoCliente: { razonSocial: ncRazonSocial, rutEmpresa: ncRut || null, email: ncEmail, telefono: ncTelefono },
+          nuevoCliente: { razonSocial: ncRazonSocial, rutEmpresa: ncRut || null, giro: ncGiro, email: ncEmail, telefono: ncTelefono, direccion: ncDireccion || null, tipoCliente: ncTipoCliente },
         };
       }
 
@@ -401,17 +439,17 @@ export function NuevaOTClient() {
                     </Button>
                   </div>
 
-                  {/* Mensaje si no existe */}
+                  {/* Botón siempre visible + mensaje si no existe */}
+                  <div className="mt-4 flex items-center justify-between">
+                    <Button variant="outline" onClick={iniciarNuevoVehiculo}>
+                      <Plus className="w-4 h-4 mr-2" /> Registrar nuevo vehículo
+                    </Button>
+                  </div>
                   {buscarMsg && (
                     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                      className="mt-4 p-4 rounded-lg border border-amber-500/30 bg-amber-500/5 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        {buscarMsg}
-                      </div>
-                      <Button size="sm" onClick={iniciarNuevoVehiculo} className="ml-4 flex-shrink-0">
-                        <Plus className="w-4 h-4 mr-1" /> Registrar vehículo
-                      </Button>
+                      className="mt-3 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      {buscarMsg}
                     </motion.div>
                   )}
                 </div>
@@ -470,33 +508,53 @@ export function NuevaOTClient() {
                         </div>
                       </div>
                       <div>
-                        <Label>VIN / N° Chasis</Label>
-                        <Input className="mt-1" value={nvVin}
-                          onChange={(e: any) => setNvVin(e.target.value)} placeholder="Número de chasis o VIN" />
+                        <Label>VIN / N° Chasis *</Label>
+                        <Input className={`mt-1 ${errores1.vin ? 'border-red-500' : ''}`} value={nvVin}
+                          onChange={(e: any) => { setNvVin(e.target.value); setErrores1(p => ({ ...p, vin: '' })); }}
+                          placeholder="Número de chasis o VIN" />
+                        <FieldError msg={errores1.vin} />
                       </div>
 
                       <div className="border-t border-border pt-4 mt-4">
-                        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><User className="w-4 h-4" /> Datos del cliente *</h3>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold flex items-center gap-2"><User className="w-4 h-4" /> Datos del cliente *</h3>
+                          <div className="flex rounded-lg overflow-hidden border border-border text-xs font-bold">
+                            {(['EMPRESA', 'PERSONA'] as const).map(tipo => (
+                              <button key={tipo} type="button"
+                                onClick={() => setNcTipoCliente(tipo)}
+                                className={`px-3 py-1 transition-colors ${ncTipoCliente === tipo ? 'bg-primary text-white' : 'bg-background text-muted-foreground hover:bg-secondary'}`}>
+                                {tipo === 'EMPRESA' ? 'Empresa' : 'Persona natural'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label>Razón social *</Label>
+                            <Label>{ncTipoCliente === 'PERSONA' ? 'Nombre completo *' : 'Razón social *'}</Label>
                             <Input className={`mt-1 ${errores1.razonSocial ? 'border-red-500' : ''}`} value={ncRazonSocial}
                               onChange={(e: any) => { setNcRazonSocial(e.target.value); setErrores1(p => ({ ...p, razonSocial: '' })); }}
-                              placeholder="Empresa Transportes S.A." />
+                              placeholder={ncTipoCliente === 'PERSONA' ? 'Juan Pérez González' : 'Empresa Transportes S.A.'} />
                             <FieldError msg={errores1.razonSocial} />
                           </div>
                           <div>
-                            <Label>RUT empresa</Label>
+                            <Label>{ncTipoCliente === 'PERSONA' ? 'RUT persona *' : 'RUT empresa *'}</Label>
                             <Input className={`mt-1 ${errores1.rut ? 'border-red-500' : ''}`} value={ncRut}
                               onChange={(e: any) => { setNcRut(formatRutInput(e.target.value)); setErrores1(p => ({ ...p, rut: '' })); }}
-                              placeholder="76.123.456-7" />
+                              placeholder="12.345.678-9" />
                             <FieldError msg={errores1.rut} />
                           </div>
+                          <div className="col-span-2">
+                            <Label>Giro *</Label>
+                            <Input className={`mt-1 ${errores1.giro ? 'border-red-500' : ''}`} value={ncGiro}
+                              onChange={(e: any) => { setNcGiro(e.target.value); setErrores1(p => ({ ...p, giro: '' })); }}
+                              placeholder={ncTipoCliente === 'PERSONA' ? 'Transporte de carga, Contratista, etc.' : 'Transporte y logística, Construcción, etc.'} />
+                            <FieldError msg={errores1.giro} />
+                          </div>
                           <div>
-                            <Label>Email</Label>
+                            <Label>Email *</Label>
                             <Input className={`mt-1 ${errores1.email ? 'border-red-500' : ''}`} value={ncEmail}
                               onChange={(e: any) => { setNcEmail(e.target.value); setErrores1(p => ({ ...p, email: '' })); }}
-                              placeholder="contacto@empresa.cl" type="email" />
+                              placeholder={ncTipoCliente === 'PERSONA' ? 'juan@gmail.com' : 'contacto@empresa.cl'} type="email" />
                             <FieldError msg={errores1.email} />
                           </div>
                           <div>
@@ -506,6 +564,15 @@ export function NuevaOTClient() {
                               placeholder="+56 9 1234 5678" />
                             <FieldError msg={errores1.telefono} />
                           </div>
+                          {ncTipoCliente === 'EMPRESA' && (
+                            <div className="col-span-2">
+                              <Label>Dirección *</Label>
+                              <Input className={`mt-1 ${errores1.direccion ? 'border-red-500' : ''}`} value={ncDireccion}
+                                onChange={(e: any) => { setNcDireccion(e.target.value); setErrores1(p => ({ ...p, direccion: '' })); }}
+                                placeholder="Av. Ejemplo 1234, Santiago" />
+                              <FieldError msg={errores1.direccion} />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -635,14 +702,30 @@ export function NuevaOTClient() {
                         <Label>Mecánico responsable *</Label>
                         <select
                           value={mecanicoId}
-                          onChange={(e: any) => { setMecanicoId(e.target.value); setErrores2(p => ({ ...p, mecanico: '' })); }}
+                          onChange={(e: any) => {
+                            if (e.target.value === '__nuevo__') { setShowCrearMecanico(true); e.target.value = mecanicoId; return; }
+                            setMecanicoId(e.target.value); setErrores2(p => ({ ...p, mecanico: '' }));
+                          }}
                           className={`w-full mt-1 bg-background border rounded-lg px-3 py-2 text-sm text-foreground ${errores2.mecanico ? 'border-red-500' : 'border-border'}`}
                         >
                           <option value="">Selecciona un mecánico</option>
                           {mecanicos.map((m: any) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                          <option value="__nuevo__">+ Agregar mecánico</option>
                         </select>
-                        {mecanicos.length === 0 && (
-                          <p className="text-xs text-amber-500 mt-1">No hay mecánicos activos. Agrégalos en Configuración → Mecánicos.</p>
+                        {showCrearMecanico && (
+                          <div className="mt-2 p-3 border border-primary/30 rounded-lg bg-primary/5 space-y-2">
+                            <p className="text-xs font-bold text-muted-foreground">Nuevo mecánico</p>
+                            <Input value={nuevoMecNombre} onChange={e => setNuevoMecNombre(e.target.value)}
+                              placeholder="Nombre del mecánico" className="text-sm h-8"
+                              onKeyDown={(e: any) => e.key === 'Enter' && crearMecanicoInline()} />
+                            <div className="flex gap-2">
+                              <Button size="sm" disabled={creandoMecanico || !nuevoMecNombre.trim()} onClick={crearMecanicoInline} className="text-xs h-7">
+                                {creandoMecanico ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                                {creandoMecanico ? 'Creando...' : 'Crear mecánico'}
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => { setShowCrearMecanico(false); setNuevoMecNombre(''); }} className="text-xs h-7">Cancelar</Button>
+                            </div>
+                          </div>
                         )}
                         <FieldError msg={errores2.mecanico} />
                       </div>

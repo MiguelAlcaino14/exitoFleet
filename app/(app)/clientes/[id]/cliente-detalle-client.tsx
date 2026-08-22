@@ -62,6 +62,7 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
         setCliente(d);
         setContactos(d?.contactos ?? []);
         setForm({
+          tipoCliente: d?.tipoCliente ?? 'EMPRESA',
           razonSocial: d?.razonSocial ?? '', rutEmpresa: d?.rutEmpresa ?? '',
           giro: d?.giro ?? '',
           nombreContacto: d?.nombreContacto ?? '', email: d?.email ?? '',
@@ -75,6 +76,9 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
   useEffect(() => { cargarCliente(); }, [cargarCliente]);
 
   const guardar = async () => {
+    if (!form.razonSocial?.trim()) { toast.error('Nombre/Razón social requerido'); return; }
+    if (form.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { toast.error('Email inválido'); return; }
+    if (form.telefono?.trim() && !/^\d{8,15}$/.test(form.telefono.replace(/[\s+]/g, ''))) { toast.error('Teléfono inválido'); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/clientes/${clienteId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
@@ -156,15 +160,27 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
           {editando ? (
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">TIPO DE CLIENTE</label>
+                  <select
+                    value={form.tipoCliente ?? 'EMPRESA'}
+                    onChange={e => setForm({ ...form, tipoCliente: e.target.value })}
+                    className="w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="EMPRESA">Empresa</option>
+                    <option value="PERSONA">Persona Natural</option>
+                  </select>
+                </div>
                 {[
-                  { label: 'RAZÓN SOCIAL', key: 'razonSocial' }, { label: 'RUT', key: 'rutEmpresa' },
-                  { label: 'GIRO', key: 'giro' },
+                  { label: form.tipoCliente === 'PERSONA' ? 'NOMBRE' : 'RAZÓN SOCIAL', key: 'razonSocial' },
+                  { label: 'RUT', key: 'rutEmpresa' },
+                  ...(form.tipoCliente !== 'PERSONA' ? [{ label: 'GIRO', key: 'giro' }] : []),
                   { label: 'CONTACTO PRINCIPAL', key: 'nombreContacto' }, { label: 'EMAIL', key: 'email' },
                   { label: 'TELÉFONO', key: 'telefono' }, { label: 'DIRECCIÓN', key: 'direccion' },
                 ].map(f => (
                   <div key={f.key}>
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">{f.label}</label>
-                    <Input value={form[f.key] ?? ''} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
+                    <Input value={form[f.key] ?? ''} onChange={(e) => setForm({ ...form, [f.key]: f.key === 'telefono' ? formatTelefonoInput(e.target.value) : e.target.value })} />
                   </div>
                 ))}
               </div>
@@ -172,7 +188,7 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
                 <Button size="sm" onClick={guardar} disabled={saving || !form.razonSocial} className="text-xs bg-primary hover:bg-primary/90">
                   <Save className="w-3 h-3 mr-1" /> {saving ? 'Guardando...' : 'Guardar'}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => { setEditando(false); setForm({ razonSocial: cliente.razonSocial, rutEmpresa: cliente.rutEmpresa ?? '', giro: cliente.giro ?? '', nombreContacto: cliente.nombreContacto ?? '', email: cliente.email ?? '', telefono: cliente.telefono ?? '', direccion: cliente.direccion ?? '' }); }} className="text-xs">
+                <Button size="sm" variant="ghost" onClick={() => { setEditando(false); setForm({ tipoCliente: cliente.tipoCliente ?? 'EMPRESA', razonSocial: cliente.razonSocial, rutEmpresa: cliente.rutEmpresa ?? '', giro: cliente.giro ?? '', nombreContacto: cliente.nombreContacto ?? '', email: cliente.email ?? '', telefono: cliente.telefono ?? '', direccion: cliente.direccion ?? '' }); }} className="text-xs">
                   <X className="w-3 h-3 mr-1" /> Cancelar
                 </Button>
               </div>
@@ -183,8 +199,16 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
                 <Building2 className="w-7 h-7 text-primary" />
               </div>
               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
-                <div><span className="text-muted-foreground">RUT:</span> <span className="text-foreground font-medium ml-1">{cliente?.rutEmpresa || '—'}</span></div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">RUT:</span>
+                  <span className="text-foreground font-medium ml-1">{cliente?.rutEmpresa || '—'}</span>
+                  <Badge className={`text-[9px] ml-1 ${cliente?.tipoCliente === 'PERSONA' ? 'bg-purple-500/20 text-purple-400' : 'bg-sky-500/20 text-sky-400'}`}>
+                    {cliente?.tipoCliente === 'PERSONA' ? 'Persona Natural' : 'Empresa'}
+                  </Badge>
+                </div>
+                {cliente?.tipoCliente !== 'PERSONA' && (
                 <div><span className="text-muted-foreground">Giro:</span> <span className="text-foreground font-medium ml-1">{cliente?.giro || '—'}</span></div>
+                )}
                 <div className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-muted-foreground" /> <span className="text-foreground">{cliente?.email || '—'}</span></div>
                 <div className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-muted-foreground" /> <span className="text-foreground">{cliente?.telefono || '—'}</span></div>
                 <div className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-muted-foreground" /> <span className="text-foreground">{cliente?.direccion || '—'}</span></div>

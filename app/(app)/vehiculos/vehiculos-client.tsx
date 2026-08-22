@@ -49,12 +49,21 @@ export function VehiculosClient() {
   const [creando, setCreando] = useState(false);
   const [crearError, setCrearError] = useState('');
 
+  // Filtro tipo (C7)
+  const [filtroTipo, setFiltroTipo] = useState('');
+
+  // Crear cliente inline (C5)
+  const [showCrearCliente, setShowCrearCliente] = useState(false);
+  const [nuevoClienteForm, setNuevoClienteForm] = useState({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' });
+  const [creandoCliente, setCreandoCliente] = useState(false);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       params.set('page', String(page));
       if (buscar) params.set('buscar', buscar);
+      if (filtroTipo) params.set('tipo', filtroTipo);
 
       const res = await fetch(`/api/vehiculos?${params.toString()}`);
       const data = await res.json();
@@ -66,10 +75,11 @@ export function VehiculosClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, buscar]);
+  }, [page, buscar, filtroTipo]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { setPage(1); }, [buscar]);
+  useEffect(() => { setPage(1); }, [filtroTipo]);
 
   // Load clients list for edit modal
   useEffect(() => {
@@ -85,8 +95,12 @@ export function VehiculosClient() {
     }
   }, [showNuevo]);
 
+  const PATENTE_RE = /^[A-Z]{2}\d{4}$|^[A-Z]{4}\d{2}$|^[A-Z]{2}\d{3}[A-Z]$/;
+
   const handleCrearVehiculo = async () => {
     if (!nuevoData.patente?.trim()) { setCrearError('Patente es requerida'); return; }
+    const patenteClean = nuevoData.patente.trim().toUpperCase().replace(/[\s-]/g, '');
+    if (!PATENTE_RE.test(patenteClean)) { setCrearError('Patente inválida. Formatos válidos: AB1234, ABCD12, AB123C'); return; }
     if (!nuevoData.clienteId) { setCrearError('Debe seleccionar un cliente'); return; }
     setCreando(true); setCrearError('');
     try {
@@ -96,6 +110,8 @@ export function VehiculosClient() {
       fetchData();
       setShowNuevo(false);
       setNuevoData({ patente: '', marca: '', modelo: '', tipoVehiculo: '', anio: '', motor: '', chasis: '', vin: '', clienteId: '' });
+      setShowCrearCliente(false);
+      setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' });
       toast.success('Vehículo creado');
     } catch { setCrearError('Error de conexión'); } finally { setCreando(false); }
   };
@@ -155,7 +171,7 @@ export function VehiculosClient() {
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight font-display">Vehículos</h1>
           <div className="w-10 h-1 bg-primary mt-2 rounded-full" />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary" className="text-xs whitespace-nowrap">
             {total} vehículo{total !== 1 ? 's' : ''}
           </Badge>
@@ -163,12 +179,17 @@ export function VehiculosClient() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Buscar patente, marca, cliente..."
-              className="pl-9 w-[280px]"
+              className="pl-9 w-[220px]"
               value={buscar}
               onChange={(e: any) => setBuscar(e.target.value)}
             />
           </div>
-          <Button size="sm" onClick={() => { setShowNuevo(true); setCrearError(''); }} className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold">
+          <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
+            className="border border-input bg-background rounded-md px-3 py-2 text-sm h-10 focus:outline-none focus:ring-2 focus:ring-ring text-foreground">
+            <option value="">Todos los tipos</option>
+            {TIPOS_VEHICULO.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <Button size="sm" onClick={() => { setShowNuevo(true); setCrearError(''); setShowCrearCliente(false); }} className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold">
             <Plus className="w-4 h-4 mr-1" /> Nuevo vehículo
           </Button>
         </div>
@@ -329,11 +350,11 @@ export function VehiculosClient() {
 
       {/* Nuevo Vehículo Modal */}
       {showNuevo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!creando) setShowNuevo(false); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!creando) { setShowNuevo(false); setShowCrearCliente(false); setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' }); } }}>
           <div className="bg-card border border-border rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold text-foreground text-lg">Nuevo Vehículo</h3>
-              <button onClick={() => setShowNuevo(false)} className="p-1 hover:bg-secondary rounded-lg"><X className="w-5 h-5" /></button>
+              <button onClick={() => { setShowNuevo(false); setShowCrearCliente(false); setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' }); }} className="p-1 hover:bg-secondary rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -374,16 +395,51 @@ export function VehiculosClient() {
               </div>
               <div className="col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">Cliente *</label>
-                <select value={nuevoData.clienteId} onChange={(e) => setNuevoData({ ...nuevoData, clienteId: e.target.value })}
+                <select value={nuevoData.clienteId}
+                  onChange={(e) => {
+                    if (e.target.value === '__nuevo__') { setShowCrearCliente(true); return; }
+                    setNuevoData({ ...nuevoData, clienteId: e.target.value });
+                  }}
                   className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
                   <option value="">Seleccionar cliente...</option>
                   {clientes.map((c: any) => <option key={c.id} value={c.id}>{c.razonSocial || 'Sin nombre'} {c.rutEmpresa ? `(${c.rutEmpresa})` : ''}</option>)}
+                  <option value="__nuevo__">+ Agregar cliente</option>
                 </select>
+                {showCrearCliente && (
+                  <div className="mt-2 p-3 border border-primary/30 rounded-lg bg-primary/5 space-y-2">
+                    <p className="text-xs font-bold text-muted-foreground">Nuevo cliente</p>
+                    <Input value={nuevoClienteForm.razonSocial} onChange={e => setNuevoClienteForm({...nuevoClienteForm, razonSocial: e.target.value})}
+                      placeholder="Razón social o nombre" className="text-sm h-8" />
+                    <Input value={nuevoClienteForm.rutEmpresa} onChange={e => setNuevoClienteForm({...nuevoClienteForm, rutEmpresa: e.target.value})}
+                      placeholder="RUT (opcional)" className="text-sm h-8" />
+                    <Input value={nuevoClienteForm.email} onChange={e => setNuevoClienteForm({...nuevoClienteForm, email: e.target.value})}
+                      placeholder="Email (opcional)" className="text-sm h-8" type="email" />
+                    <div className="flex gap-2">
+                      <Button size="sm" disabled={creandoCliente || !nuevoClienteForm.razonSocial.trim()} onClick={async () => {
+                        setCreandoCliente(true);
+                        try {
+                          const res = await fetch('/api/clientes', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(nuevoClienteForm) });
+                          const d = await res.json();
+                          if (!res.ok) { toast.error(d.error || 'Error al crear cliente'); return; }
+                          setClientes(prev => [...prev, d]);
+                          setNuevoData((prev: any) => ({ ...prev, clienteId: d.id }));
+                          setShowCrearCliente(false);
+                          setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' });
+                          toast.success('Cliente creado');
+                        } catch { toast.error('Error'); } finally { setCreandoCliente(false); }
+                      }} className="text-xs h-7">
+                        {creandoCliente ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                        {creandoCliente ? 'Creando...' : 'Crear cliente'}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setShowCrearCliente(false)} className="text-xs h-7">Cancelar</Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             {crearError && <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-3"><p className="text-sm text-red-400">{crearError}</p></div>}
             <div className="flex gap-3 justify-end mt-5">
-              <Button variant="outline" size="sm" onClick={() => setShowNuevo(false)} disabled={creando}><X className="w-4 h-4 mr-1" /> Cancelar</Button>
+              <Button variant="outline" size="sm" onClick={() => { setShowNuevo(false); setShowCrearCliente(false); }} disabled={creando}><X className="w-4 h-4 mr-1" /> Cancelar</Button>
               <Button size="sm" onClick={handleCrearVehiculo} disabled={creando} className="bg-primary text-primary-foreground">
                 {creando ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />} {creando ? 'Creando...' : 'Crear Vehículo'}
               </Button>

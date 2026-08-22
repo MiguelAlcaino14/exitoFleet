@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { formatTelefonoInput } from '@/lib/validaciones';
+import { formatTelefonoInput, validarEmail, validarTelefono } from '@/lib/validaciones';
 import { useRouter } from 'next/navigation';
 import { Truck, FileText, Loader2, LogOut, Calendar, Wrench, ChevronRight, UserCog, Save, ShieldAlert, AlertTriangle, Lock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +55,9 @@ export default function PortalDashboard() {
   }, [router]);
 
   const guardarDatos = async () => {
+    if (!form.razonSocial?.trim()) { toast.error('Nombre / Razón social es requerido'); return; }
+    if (form.email?.trim() && !validarEmail(form.email.trim())) { toast.error('El email no tiene un formato válido'); return; }
+    if (form.telefono?.trim() && !validarTelefono(form.telefono.trim())) { toast.error('El teléfono no tiene un formato válido'); return; }
     setSaving(true);
     try {
       const r = await fetch('/api/portal/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
@@ -108,8 +111,8 @@ export default function PortalDashboard() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="bg-card border-b border-border px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <header className="bg-card border-b border-border">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-[hsl(217,74%,45%)]/10 border border-[hsl(217,74%,45%)]/30 flex items-center justify-center">
               <Truck className="w-5 h-5 text-[hsl(217,74%,45%)]" />
@@ -125,8 +128,8 @@ export default function PortalDashboard() {
               <p className="text-xs text-muted-foreground">{cliente.rutEmpresa || cliente.email || ''}</p>
             </div>
             <ThemeToggleButton />
-            <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground">
-              <LogOut className="w-4 h-4 mr-1" /> Salir
+            <Button size="sm" onClick={logout} className="bg-[hsl(217,74%,45%)] text-white hover:bg-[hsl(217,74%,45%)]/90">
+              <LogOut className="w-4 h-4 mr-1" /> Cerrar sesión
             </Button>
           </div>
         </div>
@@ -180,44 +183,50 @@ export default function PortalDashboard() {
 
         {/* Ordenes */}
         {tab === 'ordenes' && (
-          <Card className="bg-card border-border">
-            <CardContent className="p-0">
-              {ordenes.length === 0 ? (
-                <div className="text-center py-16 text-muted-foreground">
-                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>Sin órdenes de trabajo registradas</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border">
-                  {ordenes.map((ot: any) => {
-                    const est = ESTADOS[ot.estado] ?? { label: ot.estado, color: 'bg-zinc-500/20 text-zinc-400' };
-                    return (
-                      <Link key={ot.id} href={`/portal/ot/${ot.id}`}
-                        className="flex items-center justify-between p-4 hover:bg-muted/50 transition cursor-pointer">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-lg bg-[hsl(217,74%,45%)]/10 flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-[hsl(217,74%,45%)]" />
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Órdenes de trabajo</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">Historial y estado de tus órdenes de trabajo en el taller</p>
+            </div>
+            <Card className="bg-card border-border">
+              <CardContent className="p-0">
+                {ordenes.length === 0 ? (
+                  <div className="text-center py-16 text-muted-foreground">
+                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>Sin órdenes de trabajo registradas</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {ordenes.map((ot: any) => {
+                      const est = ESTADOS[ot.estado] ?? { label: ot.estado, color: 'bg-zinc-500/20 text-zinc-400' };
+                      return (
+                        <Link key={ot.id} href={`/portal/ot/${ot.id}`}
+                          className="flex items-center justify-between p-4 hover:bg-muted/50 transition cursor-pointer">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-lg bg-[hsl(217,74%,45%)]/10 flex items-center justify-center">
+                              <FileText className="w-5 h-5 text-[hsl(217,74%,45%)]" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm">OT-{String(ot.otNumero).padStart(4, '0')}</p>
+                              <p className="text-xs text-muted-foreground">{ot.vehiculo?.patente} — {[ot.vehiculo?.marca, ot.vehiculo?.modelo].filter(Boolean).join(' ')}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-sm">OT-{String(ot.otNumero).padStart(4, '0')}</p>
-                            <p className="text-xs text-muted-foreground">{ot.vehiculo?.patente} — {[ot.vehiculo?.marca, ot.vehiculo?.modelo].filter(Boolean).join(' ')}</p>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right hidden sm:block">
+                              <p className="text-xs text-muted-foreground">{formatDate(ot.fechaIngreso)}</p>
+                              {ot.mecanico && <p className="text-[10px] text-muted-foreground/70">{ot.mecanico.nombre}</p>}
+                            </div>
+                            <Badge className={`text-[10px] ${est.color}`}>{est.label}</Badge>
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
                           </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right hidden sm:block">
-                            <p className="text-xs text-muted-foreground">{formatDate(ot.fechaIngreso)}</p>
-                            {ot.mecanico && <p className="text-[10px] text-muted-foreground/70">{ot.mecanico.nombre}</p>}
-                          </div>
-                          <Badge className={`text-[10px] ${est.color}`}>{est.label}</Badge>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Vehiculos */}
@@ -256,16 +265,21 @@ export default function PortalDashboard() {
 
         {/* Mis Datos */}
         {tab === 'datos' && (
-          <div className="space-y-6 max-w-3xl">
+          <div className="space-y-6">
             <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2"><UserCog className="w-4 h-4 text-[hsl(217,74%,45%)]" /> Mis Datos</CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">Puedes revisar y actualizar tus datos de contacto en cualquier momento. Los cambios quedan registrados en el historial del taller conforme a la Ley de Protección de Datos Personales.</p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2">
-                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">RAZÓN SOCIAL *</label>
+                {(() => {
+                  const esPersona = cliente.tipoCliente === 'PERSONA';
+                  return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2 lg:col-span-1">
+                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">
+                      {esPersona ? 'NOMBRE *' : 'RAZÓN SOCIAL *'}
+                    </label>
                     <Input value={form.razonSocial} onChange={e => setForm({ ...form, razonSocial: e.target.value })} />
                   </div>
                   <div>
@@ -273,10 +287,12 @@ export default function PortalDashboard() {
                     <Input value={cliente.rutEmpresa || ''} disabled className="opacity-60" />
                     <p className="text-[10px] text-muted-foreground/70 mt-1">El RUT solo puede ser modificado por el taller.</p>
                   </div>
+                  {!esPersona && (
                   <div>
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">GIRO</label>
                     <Input value={form.giro} onChange={e => setForm({ ...form, giro: e.target.value })} placeholder="Ej: Transporte de carga" />
                   </div>
+                  )}
                   <div>
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">NOMBRE DE CONTACTO</label>
                     <Input value={form.nombreContacto} onChange={e => setForm({ ...form, nombreContacto: e.target.value })} />
@@ -289,13 +305,15 @@ export default function PortalDashboard() {
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">TELÉFONO</label>
                     <Input value={form.telefono} onChange={e => setForm({ ...form, telefono: formatTelefonoInput(e.target.value) })} />
                   </div>
-                  <div className="sm:col-span-2">
+                  <div className="sm:col-span-2 lg:col-span-3">
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">DIRECCIÓN</label>
                     <Input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} />
                   </div>
                 </div>
+                  );
+                })()}
                 <div className="pt-2">
-                  <Button onClick={guardarDatos} disabled={saving || !form.razonSocial.trim()} className="bg-[hsl(217,74%,45%)] hover:bg-[hsl(217,74%,45%)]/90 text-black">
+                  <Button onClick={guardarDatos} disabled={saving || !form.razonSocial.trim()} className="bg-[hsl(217,74%,45%)] hover:bg-[hsl(217,74%,45%)]/90 text-white">
                     {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                     {saving ? 'Guardando...' : 'Guardar cambios'}
                   </Button>

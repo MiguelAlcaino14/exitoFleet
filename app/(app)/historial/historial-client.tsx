@@ -206,6 +206,8 @@ export function HistorialClient() {
                     <th className="px-4 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase hidden sm:table-cell">MOTIVO</th>
                     <th className="px-4 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase hidden lg:table-cell">INGRESO</th>
                     <th className="px-4 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase hidden lg:table-cell">VALOR</th>
+                    <th className="px-4 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase hidden xl:table-cell">ACTUALIZADO</th>
+                    <th className="px-4 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase hidden xl:table-cell">MECÁNICO</th>
                     <th className="px-4 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase text-center">ESTADO</th>
                   </tr>
                 </thead>
@@ -239,6 +241,12 @@ export function HistorialClient() {
                       <td className="px-4 py-3.5 text-sm font-semibold text-foreground hidden lg:table-cell">
                         {formatMoney(ot?.valorTotal)}
                       </td>
+                      <td className="px-4 py-3.5 text-sm text-muted-foreground hidden xl:table-cell">
+                        {ot?.updatedAt ? formatDate(ot.updatedAt) : '—'}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-muted-foreground hidden xl:table-cell">
+                        {ot?.mecanico?.nombre ?? '—'}
+                      </td>
                       <td className="px-4 py-3.5 text-center">
                         <span
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider"
@@ -253,7 +261,7 @@ export function HistorialClient() {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={7} className="text-center py-16 text-muted-foreground">
+                      <td colSpan={9} className="text-center py-16 text-muted-foreground">
                         <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
                         <p className="text-sm">No se encontraron órdenes de trabajo</p>
                         {hasFilters && (
