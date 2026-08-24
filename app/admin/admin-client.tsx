@@ -152,7 +152,8 @@ export default function AdminClient() {
     try {
       const url = '/api/admin/talleres';
       const method = isNew ? 'POST' : 'PATCH';
-      const payload = isNew ? form : { ...form, id: editId };
+      const autoSlug = form.nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const payload = isNew ? { ...form, slug: autoSlug } : { ...form, id: editId };
       const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const j = await r.json();
       if (!r.ok) { toast.error(isNew ? 'No se pudo crear el taller' : 'No se pudo actualizar el taller', { description: j?.error || 'Ocurrió un problema. Intenta nuevamente.' }); return; }
@@ -302,7 +303,7 @@ export default function AdminClient() {
   const renderEditForm = (isNew: boolean) => (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {CAMPOS_TALLER.map(f => (
+        {CAMPOS_TALLER.filter(f => !(isNew && f.k === 'slug')).map(f => (
           <div key={f.k}>
             <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">{f.l}</label>
             <Input value={form[f.k] ?? ''} onChange={(e: any) => {
