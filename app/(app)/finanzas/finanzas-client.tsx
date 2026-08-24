@@ -212,7 +212,7 @@ export function FinanzasClient() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">MONTO NETO (sin IVA)</label>
+                    <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">MONTO NETO (sin IVA) *</label>
                     <Input type="number" placeholder="Monto neto" value={facturaForm.montoNeto} onChange={(e) => setFacturaForm({ ...facturaForm, montoNeto: e.target.value })} className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" onWheel={(e: any) => e.target.blur()} />
                     {facturaForm.montoNeto && (
                       <div className="text-[10px] text-muted-foreground mt-1">

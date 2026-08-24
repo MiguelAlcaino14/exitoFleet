@@ -177,7 +177,7 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
                   { label: form.tipoCliente === 'PERSONA' ? 'NOMBRE' : 'RAZÓN SOCIAL', key: 'razonSocial' },
                   { label: 'RUT', key: 'rutEmpresa' },
                   ...(form.tipoCliente !== 'PERSONA' ? [{ label: 'GIRO *', key: 'giro' }] : []),
-                  { label: 'CONTACTO PRINCIPAL', key: 'nombreContacto' }, { label: 'EMAIL', key: 'email' },
+                  { label: 'CONTACTO PRINCIPAL *', key: 'nombreContacto' }, { label: 'EMAIL', key: 'email' },
                   { label: 'TELÉFONO', key: 'telefono' }, { label: 'DIRECCIÓN *', key: 'direccion' },
                 ].map(f => (
                   <div key={f.key}>
@@ -208,15 +208,14 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
                     {cliente?.tipoCliente === 'PERSONA' ? 'Persona Natural' : 'Empresa'}
                   </Badge>
                 </div>
-                {cliente?.tipoCliente !== 'PERSONA' && (
-                <div><span className="text-muted-foreground">Giro:</span> <span className="text-foreground font-medium ml-1">{cliente?.giro || '—'}</span></div>
-                )}
+                <div>
+                  <span className="text-muted-foreground">{cliente?.tipoCliente === 'PERSONA' ? 'Actividad:' : 'Giro:'}</span>
+                  <span className="text-foreground font-medium ml-1">{cliente?.giro || '—'}</span>
+                </div>
                 <div className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-muted-foreground" /> <span className="text-foreground">{cliente?.email || '—'}</span></div>
                 <div className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-muted-foreground" /> <span className="text-foreground">{cliente?.telefono || '—'}</span></div>
                 <div className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-muted-foreground" /> <span className="text-foreground">{cliente?.direccion || '—'}</span></div>
-                {cliente?.nombreContacto && (
-                  <div><span className="text-muted-foreground">Contacto:</span> <span className="text-foreground font-medium ml-1">{cliente.nombreContacto}</span></div>
-                )}
+                <div><span className="text-muted-foreground">Contacto:</span> <span className="text-foreground font-medium ml-1">{cliente?.nombreContacto || '—'}</span></div>
               </div>
               <div className="flex gap-4 sm:flex-col sm:items-end text-center">
                 <div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, Truck, User, Calendar, Gauge, Fuel, FileText, Wrench, Camera, Upload, Loader2, Clock, Send, Printer, Plus, X, MessageSquare, Mail, Check, UserPlus, ClipboardCheck, Save, Trash2 } from 'lucide-react';
+import { ArrowLeft, Truck, User, Calendar, Gauge, Fuel, FileText, Wrench, Camera, Upload, Loader2, Clock, Send, Printer, Plus, X, MessageSquare, Mail, Check, UserPlus, ClipboardCheck, Save, Trash2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +99,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
   // Fotos
   const [fotos, setFotos] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
 
   // Datos empresa
   const [configTaller, setConfigTaller] = useState<any>(null);
@@ -408,6 +409,8 @@ export function OTDetalleClient({ otId }: { otId: string }) {
   const handleUploadFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const localUrl = URL.createObjectURL(file);
+    setUploadPreview(localUrl);
     setUploading(true);
     try {
       const presignedRes = await fetch('/api/upload/presigned', {
@@ -424,12 +427,14 @@ export function OTDetalleClient({ otId }: { otId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_storage_path, contentType: file.type, fileName: file.name, isPublic: true }),
       });
-      fetchOT();
+      await fetchOT();
       toast.success('Foto subida');
     } catch {
       toast.error('Error al subir foto');
     }
     setUploading(false);
+    URL.revokeObjectURL(localUrl);
+    setUploadPreview(null);
   };
 
   if (loading) return (
@@ -869,7 +874,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                                 </span>
                                 <div className="flex items-center justify-center gap-1">
                                   <button onClick={() => startEditItem(item)} title="Editar" className="text-muted-foreground hover:text-primary transition-colors">
-                                    <Save className="w-3.5 h-3.5" />
+                                    <Pencil className="w-3.5 h-3.5" />
                                   </button>
                                   <button onClick={() => eliminarItem(item.id)} title="Eliminar" className="text-muted-foreground hover:text-destructive transition-colors">
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -1035,6 +1040,14 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                     </div>
                   )}
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {uploadPreview && (
+                      <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-dashed border-primary/50 bg-muted animate-pulse">
+                        <Image src={uploadPreview} alt="Subiendo..." fill className="object-cover opacity-60" unoptimized />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                        </div>
+                      </div>
+                    )}
                     {fotos.map((foto: any) => (
                       <div key={foto.id} className="relative aspect-square rounded-lg overflow-hidden border border-border bg-muted">
                         <Image src={foto.cloudStoragePath?.startsWith('http') ? foto.cloudStoragePath : `/api/files/${encodeURIComponent(foto.cloudStoragePath)}`}

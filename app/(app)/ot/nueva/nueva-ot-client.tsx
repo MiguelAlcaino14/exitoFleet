@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { validarRut, validarTelefono, validarEmail, formatRutInput, validarPatente, formatPatenteInput } from '@/lib/validaciones';
-import { Search, Truck, User, CheckCircle, Plus, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, Truck, User, CheckCircle, Plus, ArrowLeft, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -131,21 +131,21 @@ export function NuevaOTClient() {
   // Búsqueda en tiempo real + sugerencias
   useEffect(() => {
     setBuscarMsg('');
-    if (patente.length < 2) { setSugerencias([]); setShowSugerencias(false); return; }
+    if (patente.length < 1) { setSugerencias([]); setShowSugerencias(false); return; }
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/vehiculos?buscar=${encodeURIComponent(patente)}&page=1`);
+        const res = await fetch(`/api/vehiculos?buscar=${encodeURIComponent(patente)}&page=1`, { signal: controller.signal });
         const data = await res.json();
         const lista = data.vehiculos ?? [];
         setSugerencias(lista.slice(0, 5));
         setShowSugerencias(lista.length > 0);
-        // Si patente válida (6+ chars) y no hay coincidencias → mostrar mensaje
         if (patente.replace(/[^a-zA-Z0-9]/g, '').length >= 6 && lista.length === 0) {
           setBuscarMsg('Vehículo no registrado. Puedes registrarlo como nuevo.');
         }
-      } catch { setSugerencias([]); }
-    }, 350);
-    return () => clearTimeout(timer);
+      } catch (e: any) { if (e?.name !== 'AbortError') setSugerencias([]); }
+    }, 150);
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [patente]);
 
   // Cerrar sugerencias al hacer click fuera
@@ -198,10 +198,6 @@ export function NuevaOTClient() {
   };
 
   const iniciarNuevoVehiculo = () => {
-    if (patente.replace(/[^a-zA-Z0-9]/g, '').length < 6) {
-      toast.error('Ingresa al menos 6 caracteres de patente antes de registrar');
-      return;
-    }
     setEsNuevo(true);
     setVehiculo(null);
     setWizardStep(1);
@@ -212,6 +208,8 @@ export function NuevaOTClient() {
 
   const validateStep1 = (): boolean => {
     const errs: Record<string, string> = {};
+    if (!patente.trim()) errs.patente = 'Patente requerida';
+    else if (!validarPatente(patente)) errs.patente = 'Patente inválida — formato: ABCD-12, AB-1234 o A-1234';
     if (!nvMarca.trim()) errs.marca = 'Marca requerida';
     if (!nvModelo.trim()) errs.modelo = 'Modelo requerido';
     if (!nvAnio) errs.anio = 'Año requerido';
@@ -219,7 +217,7 @@ export function NuevaOTClient() {
     if (!ncRazonSocial.trim()) errs.razonSocial = 'Razón social requerida';
     if (!ncRut.trim()) errs.rut = 'RUT requerido';
     else if (!validarRut(ncRut)) errs.rut = 'RUT inválido — formato: 12.345.678-9';
-    if (!ncGiro.trim()) errs.giro = 'Giro requerido';
+    if (ncTipoCliente === 'EMPRESA' && !ncGiro.trim()) errs.giro = 'Giro requerido';
     if (!ncEmail.trim()) errs.email = 'Email requerido';
     else if (!validarEmail(ncEmail)) errs.email = 'Email inválido';
     if (ncTelefono.trim() && !validarTelefono(ncTelefono)) errs.telefono = 'Teléfono inválido';
@@ -397,13 +395,12 @@ export function NuevaOTClient() {
         {screen === 'buscar' && (
           <motion.div key="buscar" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Search className="w-5 h-5 text-primary" /> Buscar vehículo por patente
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-sm mb-6">Ingresa la patente del vehículo para buscarlo en el sistema</p>
+              {/* Sección superior: buscar por patente */}
+              <div className="p-6">
+                <h3 className="flex items-center gap-2 text-base font-semibold text-foreground mb-1">
+                  <Search className="w-4 h-4 text-primary" /> Buscar vehículo por patente
+                </h3>
+                <p className="text-muted-foreground text-sm mb-4">Ingresa la patente para buscarlo en el sistema</p>
                 <div className="relative" ref={sugerenciasRef}>
                   <div className="flex gap-3">
                     <div className="relative flex-1">
@@ -415,7 +412,6 @@ export function NuevaOTClient() {
                         onKeyDown={(e: any) => e.key === 'Enter' && buscarPatente()}
                         onFocus={() => sugerencias.length > 0 && setShowSugerencias(true)}
                       />
-                      {/* Dropdown sugerencias */}
                       {showSugerencias && sugerencias.length > 0 && (
                         <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
                           {sugerencias.map((v: any) => (
@@ -438,13 +434,6 @@ export function NuevaOTClient() {
                       <Search className="w-4 h-4 mr-2" /> Buscar
                     </Button>
                   </div>
-
-                  {/* Botón siempre visible + mensaje si no existe */}
-                  <div className="mt-4 flex items-center justify-between">
-                    <Button variant="outline" onClick={iniciarNuevoVehiculo}>
-                      <Plus className="w-4 h-4 mr-2" /> Registrar nuevo vehículo
-                    </Button>
-                  </div>
                   {buscarMsg && (
                     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                       className="mt-3 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
@@ -453,8 +442,35 @@ export function NuevaOTClient() {
                     </motion.div>
                   )}
                 </div>
-              </CardContent>
+              </div>
+
+              {/* Sección inferior: registrar nuevo vehículo */}
+              <div className="border-t border-border bg-muted/20 px-6 py-8 flex flex-col items-start justify-center gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Truck className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Vehículo no registrado</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Ingresa sus datos y créalo directamente desde aquí</p>
+                  </div>
+                </div>
+                <Button onClick={iniciarNuevoVehiculo} className="mt-1">
+                  <Plus className="w-4 h-4 mr-2" /> Registrar nuevo vehículo
+                </Button>
+              </div>
             </Card>
+
+            {/* Aclaración: validación de patente */}
+            <div className="mt-4 p-4 rounded-lg border border-border bg-muted/30 flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-primary mb-1">Validación de patente</p>
+                <p className="text-xs text-muted-foreground">
+                  Formato permitido: Autos y vehículos de 4 ruedas (4 letras y 2 números) &bull; Motos y vehículos de 2 o 3 ruedas (3 letras y 2 números)
+                </p>
+              </div>
+            </div>
           </motion.div>
         )}
 
@@ -469,8 +485,18 @@ export function NuevaOTClient() {
               {wizardStep === 1 && esNuevo && (
                 <motion.div key="step1" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-6">
                   <Card>
-                    <CardHeader><CardTitle className="text-base">Nuevo vehículo: {patente}</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base">Nuevo vehículo</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
+                      <div>
+                        <Label>Patente *</Label>
+                        <Input
+                          className={`mt-1 font-mono tracking-wider ${errores1.patente ? 'border-red-500' : ''}`}
+                          value={patente}
+                          onChange={(e: any) => { setPatente(formatPatenteInput(e.target.value)); setErrores1(p => ({ ...p, patente: '' })); }}
+                          placeholder="ABCD-12"
+                        />
+                        {errores1.patente && <p className="text-xs text-red-500 mt-1">{errores1.patente}</p>}
+                      </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label>Marca *</Label>
@@ -543,13 +569,15 @@ export function NuevaOTClient() {
                               placeholder="12.345.678-9" />
                             <FieldError msg={errores1.rut} />
                           </div>
+                          {ncTipoCliente === 'EMPRESA' && (
                           <div className="col-span-2">
                             <Label>Giro *</Label>
                             <Input className={`mt-1 ${errores1.giro ? 'border-red-500' : ''}`} value={ncGiro}
                               onChange={(e: any) => { setNcGiro(e.target.value); setErrores1(p => ({ ...p, giro: '' })); }}
-                              placeholder={ncTipoCliente === 'PERSONA' ? 'Transporte de carga, Contratista, etc.' : 'Transporte y logística, Construcción, etc.'} />
+                              placeholder="Transporte y logística, Construcción, etc." />
                             <FieldError msg={errores1.giro} />
                           </div>
+                          )}
                           <div>
                             <Label>Email *</Label>
                             <Input className={`mt-1 ${errores1.email ? 'border-red-500' : ''}`} value={ncEmail}

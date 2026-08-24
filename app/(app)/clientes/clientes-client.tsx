@@ -69,7 +69,7 @@ export function ClientesClient() {
     else if (!validarEmail(nuevoForm.email)) errs.email = 'Email inválido';
     if (!nuevoForm.telefono.trim()) errs.telefono = 'Teléfono requerido';
     else if (!validarTelefono(nuevoForm.telefono)) errs.telefono = 'Teléfono inválido';
-    if (tipoCliente === 'empresa' && !nuevoForm.nombreContacto.trim()) errs.nombreContacto = 'Nombre de contacto requerido';
+    if (!nuevoForm.nombreContacto.trim()) errs.nombreContacto = tipoCliente === 'empresa' ? 'Nombre de contacto requerido' : 'Nombre de contacto requerido';
     if (tipoCliente === 'empresa' && !nuevoForm.giro.trim()) errs.giro = 'Giro requerido';
     if (!nuevoForm.direccion.trim()) errs.direccion = 'Dirección requerida';
     setCrearErrores(errs);
@@ -161,8 +161,9 @@ export function ClientesClient() {
             <table className="w-full">
               <thead>
                 <tr className="bg-secondary/30 text-left">
-                  <th className="px-5 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase">EMPRESA</th>
+                  <th className="px-5 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase">EMPRESA / NOMBRE</th>
                   <th className="px-5 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase hidden sm:table-cell">RUT</th>
+                  <th className="px-5 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase hidden sm:table-cell">TIPO CLIENTE</th>
                   <th className="px-5 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase hidden md:table-cell">CONTACTO</th>
                   <th className="px-5 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase hidden lg:table-cell">EMAIL</th>
                   <th className="px-5 py-3 text-[10px] font-extrabold tracking-wider text-muted-foreground uppercase hidden lg:table-cell">TELÉFONO</th>
@@ -180,13 +181,15 @@ export function ClientesClient() {
                         </div>
                         <div>
                           <span className="font-semibold text-foreground text-sm truncate">{cliente?.razonSocial}</span>
-                          {cliente?.tipoCliente === 'PERSONA' && (
-                            <span className="ml-2 text-[9px] text-purple-400 font-bold">PERSONA</span>
-                          )}
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-muted-foreground hidden sm:table-cell">{cliente?.rutEmpresa || '—'}</td>
+                    <td className="px-5 py-3.5 hidden sm:table-cell">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cliente?.tipoCliente === 'PERSONA' ? 'bg-purple-500/20 text-purple-400' : 'bg-primary/10 text-primary'}`}>
+                        {cliente?.tipoCliente === 'PERSONA' ? 'Persona' : 'Empresa'}
+                      </span>
+                    </td>
                     <td className="px-5 py-3.5 text-sm text-muted-foreground hidden md:table-cell">{cliente?.nombreContacto || '—'}</td>
                     <td className="px-5 py-3.5 text-sm text-muted-foreground hidden lg:table-cell">{cliente?.email || '—'}</td>
                     <td className="px-5 py-3.5 text-sm text-muted-foreground hidden lg:table-cell">{cliente?.telefono || '—'}</td>
@@ -319,22 +322,20 @@ export function ClientesClient() {
                 {crearErrores.rutEmpresa && <p className="text-xs text-red-500 mt-1">{crearErrores.rutEmpresa}</p>}
               </div>
               {tipoCliente === 'empresa' && (
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Giro *</label>
-                  <Input value={nuevoForm.giro} onChange={(e: any) => { setNuevoForm({ ...nuevoForm, giro: e.target.value }); setCrearErrores(p => ({ ...p, giro: '' })); }} placeholder="Transporte de carga" className={crearErrores.giro ? 'border-red-500' : ''} />
-                  {crearErrores.giro && <p className="text-xs text-red-500 mt-1">{crearErrores.giro}</p>}
-                </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Giro *</label>
+                <Input value={nuevoForm.giro} onChange={(e: any) => { setNuevoForm({ ...nuevoForm, giro: e.target.value }); setCrearErrores(p => ({ ...p, giro: '' })); }} placeholder="Transporte de carga" className={crearErrores.giro ? 'border-red-500' : ''} />
+                {crearErrores.giro && <p className="text-xs text-red-500 mt-1">{crearErrores.giro}</p>}
+              </div>
               )}
-              {tipoCliente === 'empresa' && (
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Nombre de contacto *</label>
-                  <Input value={nuevoForm.nombreContacto}
-                    onChange={(e: any) => { setNuevoForm({ ...nuevoForm, nombreContacto: e.target.value }); setCrearErrores(p => ({ ...p, nombreContacto: '' })); }}
-                    placeholder="Juan Pérez"
-                    className={crearErrores.nombreContacto ? 'border-red-500' : ''} />
-                  {crearErrores.nombreContacto && <p className="text-xs text-red-500 mt-1">{crearErrores.nombreContacto}</p>}
-                </div>
-              )}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Nombre de contacto *</label>
+                <Input value={nuevoForm.nombreContacto}
+                  onChange={(e: any) => { setNuevoForm({ ...nuevoForm, nombreContacto: e.target.value }); setCrearErrores(p => ({ ...p, nombreContacto: '' })); }}
+                  placeholder={tipoCliente === 'empresa' ? 'Juan Pérez' : 'Persona adicional de contacto'}
+                  className={crearErrores.nombreContacto ? 'border-red-500' : ''} />
+                {crearErrores.nombreContacto && <p className="text-xs text-red-500 mt-1">{crearErrores.nombreContacto}</p>}
+              </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Email *</label>
                 <Input type="email" value={nuevoForm.email}

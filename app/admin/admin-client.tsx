@@ -5,7 +5,7 @@ import { validarRut, validarTelefono, validarEmail, formatRutInput, formatTelefo
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Building2, Plus, Pencil, Save, X, Users, Truck, FileText, Search, LogOut, Loader2, Palette, ArrowLeft, Upload, Wrench, Mail, Phone, MapPin, Calendar, ImageIcon, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Building2, Plus, Pencil, Save, X, Users, Truck, FileText, Search, LogOut, Loader2, Palette, ArrowLeft, Upload, Wrench, Mail, Phone, MapPin, Calendar, ImageIcon, KeyRound, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { NotificationsBell } from '@/components/notifications-bell';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -105,6 +105,9 @@ export default function AdminClient() {
   const [euEmail, setEuEmail] = useState('');
   const [euSaving, setEuSaving] = useState(false);
   const [nuShowPass, setNuShowPass] = useState(false);
+  const [deleteTallerId, setDeleteTallerId] = useState<string | null>(null);
+  const [deleteTallerNombre, setDeleteTallerNombre] = useState('');
+  const [deletingTaller, setDeletingTaller] = useState(false);
 
   const fetchTalleres = async () => {
     try {
@@ -152,8 +155,8 @@ export default function AdminClient() {
       const payload = isNew ? form : { ...form, id: editId };
       const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const j = await r.json();
-      if (!r.ok) { toast.error(j?.error || 'Error'); return; }
-      toast.success(isNew ? 'Taller creado' : 'Taller actualizado');
+      if (!r.ok) { toast.error(isNew ? 'No se pudo crear el taller' : 'No se pudo actualizar el taller', { description: j?.error || 'Ocurrió un problema. Intenta nuevamente.' }); return; }
+      toast.success(isNew ? 'Nuevo taller creado' : 'Taller actualizado', { description: isNew ? `${form.nombre} fue creado correctamente.` : `${form.nombre} fue actualizado correctamente.` });
       setEditId(null);
       fetchTalleres();
       if (detalle && !isNew) {
@@ -189,8 +192,8 @@ export default function AdminClient() {
         body: JSON.stringify({ email: nuEmail.trim(), nombre: nuNombre.trim(), password: nuPassword, rol: nuRol, tallerId }),
       });
       const j = await r.json();
-      if (!r.ok) { toast.error(j?.error || 'Error al crear usuario'); setNuSaving(false); return; }
-      toast.success(`Usuario ${nuEmail} creado`);
+      if (!r.ok) { toast.error('No se pudo crear el usuario', { description: j?.error || 'Ocurrió un problema al crear el usuario. Intenta nuevamente.' }); setNuSaving(false); return; }
+      toast.success('Usuario creado', { description: `${nuNombre.trim()} fue agregado a ${detalle?.nombre ?? 'el taller'}.` });
       setNuEmail(''); setNuNombre(''); setNuPassword(''); setNuRol('ADMIN');
       setShowNuevoUsuario(false);
       verDetalle(tallerId);
@@ -218,24 +221,31 @@ export default function AdminClient() {
       }
       const r = await fetch('/api/usuarios', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const j = await r.json();
-      if (!r.ok) { toast.error(j?.error || 'Error al editar usuario'); setEuSaving(false); return; }
-      toast.success('Usuario actualizado');
+      if (!r.ok) { toast.error('No se pudo actualizar el usuario', { description: j?.error || 'Ocurrió un problema. Intenta nuevamente.' }); setEuSaving(false); return; }
+      toast.success('Usuario actualizado', { description: `${euNombre.trim()} fue actualizado correctamente.` });
       setEditUsuarioId(null);
       verDetalle(tallerId);
     } catch { toast.error('Error'); } finally { setEuSaving(false); }
   };
 
-  const eliminarTaller = async (tallerId: string, nombre: string) => {
-    if (!confirm(`¿Eliminar definitivamente el taller "${nombre}"?\n\nEsta acción no se puede deshacer y eliminará todos sus datos.`)) return;
+  const eliminarTaller = (tallerId: string, nombre: string) => {
+    setDeleteTallerId(tallerId);
+    setDeleteTallerNombre(nombre);
+  };
+
+  const confirmarEliminarTaller = async () => {
+    if (!deleteTallerId) return;
+    setDeletingTaller(true);
     try {
-      const r = await fetch(`/api/admin/talleres?id=${tallerId}`, { method: 'DELETE' });
+      const r = await fetch(`/api/admin/talleres?id=${deleteTallerId}`, { method: 'DELETE' });
       const j = await r.json();
-      if (!r.ok) { toast.error(j?.error || 'Error al eliminar taller'); return; }
-      toast.success(`Taller "${nombre}" eliminado`);
+      if (!r.ok) { toast.error('No se pudo eliminar el taller', { description: j?.error || 'Ocurrió un problema. Intenta nuevamente.' }); return; }
+      toast.success('Taller eliminado', { description: `${deleteTallerNombre} fue eliminado del sistema.` });
+      setDeleteTallerId(null);
       setTab('talleres');
       setDetalle(null);
       fetchTalleres();
-    } catch { toast.error('Error'); }
+    } catch { toast.error('Error'); } finally { setDeletingTaller(false); }
   };
 
   const enviarResetUsuario = async (email: string, nombre: string) => {
@@ -256,20 +266,28 @@ export default function AdminClient() {
     try {
       const r = await fetch(`/api/usuarios?id=${userId}`, { method: 'DELETE' });
       const j = await r.json();
-      if (!r.ok) { toast.error(j?.error || 'Error'); return; }
-      toast.success(j?.desactivado ? `${nombre} desactivado (tiene OTs asociadas)` : `${nombre} eliminado`);
+      if (!r.ok) { toast.error('No se pudo eliminar el usuario', { description: j?.error || 'Ocurrió un problema. Intenta nuevamente.' }); return; }
+      if (j?.desactivado) {
+        toast.warning('Usuario sin acceso', { description: `${nombre} fue deshabilitado (tiene OTs asociadas).` });
+      } else {
+        toast.success('Usuario eliminado', { description: `${nombre} fue eliminado del sistema.` });
+      }
       verDetalle(tallerId);
     } catch { toast.error('Error'); }
   };
 
-  const toggleUsuarioActivo = async (userId: string, activo: boolean, tallerId: string) => {
+  const toggleUsuarioActivo = async (userId: string, activo: boolean, tallerId: string, nombre: string) => {
     try {
       await fetch('/api/usuarios', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: userId, activo: !activo }),
       });
-      toast.success(activo ? 'Usuario desactivado' : 'Usuario activado');
+      if (activo) {
+        toast.warning('Usuario sin acceso', { description: `${nombre} se encuentra deshabilitado.` });
+      } else {
+        toast.success('Usuario activado', { description: `${nombre} recuperó el acceso al sistema.` });
+      }
       verDetalle(tallerId);
     } catch { toast.error('Error'); }
   };
@@ -291,7 +309,7 @@ export default function AdminClient() {
               const v = e.target.value;
               const val = f.k === 'rut' ? formatRutInput(v) : (f.k === 'telefono' || f.k === 'celular') ? formatTelefonoInput(v) : v;
               setForm({ ...form, [f.k]: val });
-            }} placeholder={f.k === 'slug' ? 'Se genera del nombre si vacío' : f.k === 'rut' ? 'Ej: 76.314.706-1' : ''} />
+            }} />
           </div>
         ))}
         <div>
@@ -624,7 +642,7 @@ export default function AdminClient() {
                                         className="text-[10px] font-bold px-2 py-0.5 rounded border border-amber-500/40 text-amber-500 hover:bg-amber-500/10 transition flex items-center gap-1">
                                         <KeyRound className="w-2.5 h-2.5" /> Restablecer clave
                                       </button>
-                                      <button onClick={() => toggleUsuarioActivo(u.id, u.activo, detalle.id)}
+                                      <button onClick={() => toggleUsuarioActivo(u.id, u.activo, detalle.id, u.nombre)}
                                         className={`text-[10px] font-bold px-2 py-0.5 rounded border transition ${u.activo ? 'border-red-400/40 text-red-400 hover:bg-red-400/10' : 'border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10'}`}>
                                         {u.activo ? 'Bloquear' : 'Activar'}
                                       </button>
@@ -737,6 +755,39 @@ export default function AdminClient() {
         )}
         </div>
       </main>
+
+      {/* Modal confirmar eliminar taller */}
+      {deleteTallerId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!deletingTaller) setDeleteTallerId(null); }}>
+          <div className="bg-card border border-border rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Eliminar taller</h3>
+                <p className="text-sm text-muted-foreground">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mb-2">
+              ¿Estás seguro de que deseas eliminar el taller{' '}
+              <strong className="text-foreground">{deleteTallerNombre}</strong>?
+            </p>
+            <p className="text-xs text-red-400/80 mb-5">
+              Se eliminarán permanentemente todos sus datos, usuarios, vehículos y órdenes de trabajo asociadas.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setDeleteTallerId(null)} disabled={deletingTaller}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" size="sm" onClick={confirmarEliminarTaller} disabled={deletingTaller}>
+                {deletingTaller ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                {deletingTaller ? 'Eliminando...' : 'Eliminar taller'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

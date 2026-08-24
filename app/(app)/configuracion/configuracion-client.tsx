@@ -17,6 +17,7 @@ const ROLES: Record<string, { label: string; color: string }> = {
   JEFE_TALLER: { label: 'Jefe de Taller', color: 'bg-emerald-500/20 text-emerald-400' },
   RECEPCION: { label: 'Recepción', color: 'bg-blue-500/20 text-blue-400' },
   FINANZAS: { label: 'Finanzas', color: 'bg-violet-500/20 text-violet-400' },
+  CLIENTE: { label: 'Cliente', color: 'bg-amber-500/20 text-amber-400' },
 };
 
 export function ConfiguracionClient() {
@@ -42,6 +43,11 @@ export function ConfiguracionClient() {
   const [nuevoPassword, setNuevoPassword] = useState('');
   const [nuevoRol, setNuevoRol] = useState('JEFE_TALLER');
   const [showPassword, setShowPassword] = useState(false);
+  // Campos extra para CLIENTE
+  const [nuevoClienteRut, setNuevoClienteRut] = useState('');
+  const [nuevoClienteTelefono, setNuevoClienteTelefono] = useState('');
+  const [nuevoClienteTipo, setNuevoClienteTipo] = useState<'EMPRESA' | 'PERSONA'>('EMPRESA');
+  const [nuevoClienteGiro, setNuevoClienteGiro] = useState('');
   const [usuarioSaving, setUsuarioSaving] = useState(false);
 
   // Mecánicos
@@ -214,19 +220,46 @@ export function ConfiguracionClient() {
     }
     if (!validarEmail(nuevoEmail)) { toast.error('Email inválido'); return; }
     if (nuevoPassword.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (nuevoRol === 'CLIENTE' && !nuevoClienteRut.trim()) {
+      toast.error('RUT es requerido para clientes'); return;
+    }
+    if (nuevoRol === 'CLIENTE' && !validarRut(nuevoClienteRut)) {
+      toast.error('RUT inválido — formato: 12.345.678-9'); return;
+    }
+    if (nuevoRol === 'CLIENTE' && nuevoClienteTipo === 'EMPRESA' && !nuevoClienteGiro.trim()) {
+      toast.error('Giro es requerido para empresas'); return;
+    }
     setUsuarioSaving(true);
     try {
-      const res = await fetch('/api/usuarios', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nuevoNombre, email: nuevoEmail, password: nuevoPassword, rol: nuevoRol }),
-      });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
-      toast.success('Usuario creado');
+      if (nuevoRol === 'CLIENTE') {
+        const res = await fetch('/api/clientes', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tipoCliente: nuevoClienteTipo,
+            razonSocial: nuevoNombre.trim(),
+            rut: nuevoClienteRut.trim(),
+            email: nuevoEmail.trim(),
+            telefono: nuevoClienteTelefono.trim() || null,
+            giro: nuevoClienteGiro.trim() || null,
+            password: nuevoPassword,
+          }),
+        });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+        toast.success('Cliente creado', { description: `${nuevoNombre} fue registrado correctamente.` });
+      } else {
+        const res = await fetch('/api/usuarios', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre: nuevoNombre, email: nuevoEmail, password: nuevoPassword, rol: nuevoRol }),
+        });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+        toast.success('Usuario creado', { description: `${nuevoNombre} fue creado correctamente.` });
+        const r = await fetch('/api/usuarios').then(r => r.json());
+        setUsuarios(r ?? []);
+      }
       setNuevoNombre(''); setNuevoEmail(''); setNuevoPassword(''); setNuevoRol('JEFE_TALLER');
+      setNuevoClienteRut(''); setNuevoClienteTelefono(''); setNuevoClienteTipo('EMPRESA'); setNuevoClienteGiro('');
       setShowNuevoUsuario(false);
-      const r = await fetch('/api/usuarios').then(r => r.json());
-      setUsuarios(r ?? []);
-    } catch (e: any) { toast.error(e.message ?? 'Error al crear usuario'); }
+    } catch (e: any) { toast.error(e.message ?? 'Error al crear'); }
     setUsuarioSaving(false);
   };
 
@@ -336,35 +369,35 @@ export function ConfiguracionClient() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-xs font-bold">Razón Social *</Label>
-                    <Input value={empresa.razonSocial ?? ''} onChange={e => setEmpresa({ ...empresa, razonSocial: e.target.value })} placeholder="Full Truck Service SPA" className="mt-1" />
+                    <Input value={empresa.razonSocial ?? ''} onChange={e => setEmpresa({ ...empresa, razonSocial: e.target.value })} className="mt-1" />
                   </div>
                   <div>
                     <Label className="text-xs font-bold">RUT Empresa</Label>
-                    <Input value={empresa.rut ?? ''} onChange={e => setEmpresa({ ...empresa, rut: formatRutInput(e.target.value) })} placeholder="76.115.891-0" className="mt-1" />
+                    <Input value={empresa.rut ?? ''} onChange={e => setEmpresa({ ...empresa, rut: formatRutInput(e.target.value) })} className="mt-1" />
                   </div>
                 </div>
                 <div>
                   <Label className="text-xs font-bold">Dirección</Label>
-                  <Input value={empresa.direccion ?? ''} onChange={e => setEmpresa({ ...empresa, direccion: e.target.value })} placeholder="Los Nogales Poniente 33A, Lampa, RM" className="mt-1" />
+                  <Input value={empresa.direccion ?? ''} onChange={e => setEmpresa({ ...empresa, direccion: e.target.value })} className="mt-1" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-xs font-bold">Teléfono Fijo</Label>
-                    <Input value={empresa.telefono ?? ''} onChange={e => setEmpresa({ ...empresa, telefono: formatTelefonoInput(e.target.value) })} placeholder="+56 9 5219 9926" className="mt-1" />
+                    <Input value={empresa.telefono ?? ''} onChange={e => setEmpresa({ ...empresa, telefono: formatTelefonoInput(e.target.value) })} className="mt-1" />
                   </div>
                   <div>
                     <Label className="text-xs font-bold">Celular</Label>
-                    <Input value={empresa.celular ?? ''} onChange={e => setEmpresa({ ...empresa, celular: formatTelefonoInput(e.target.value) })} placeholder="+56 9 1234 5678" className="mt-1" />
+                    <Input value={empresa.celular ?? ''} onChange={e => setEmpresa({ ...empresa, celular: formatTelefonoInput(e.target.value) })} className="mt-1" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-xs font-bold">Email de Contacto</Label>
-                    <Input value={empresa.email ?? ''} onChange={e => setEmpresa({ ...empresa, email: e.target.value })} placeholder="contacto@taller.cl" className="mt-1" />
+                    <Input value={empresa.email ?? ''} onChange={e => setEmpresa({ ...empresa, email: e.target.value })} className="mt-1" />
                   </div>
                   <div>
                     <Label className="text-xs font-bold">División / Giro</Label>
-                    <Input value={empresa.division ?? ''} onChange={e => setEmpresa({ ...empresa, division: e.target.value })} placeholder="División Camiones" className="mt-1" />
+                    <Input value={empresa.division ?? ''} onChange={e => setEmpresa({ ...empresa, division: e.target.value })} className="mt-1" />
                   </div>
                 </div>
                 <Button onClick={guardarEmpresa} disabled={empresaSaving} className="font-bold text-xs tracking-wider mt-2">
@@ -454,38 +487,89 @@ export function ConfiguracionClient() {
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
                 className="p-4 rounded-lg border border-primary/20 bg-primary/5 mb-6 space-y-3">
                 <h3 className="text-xs font-bold tracking-widest text-muted-foreground">NUEVO USUARIO</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Nombre completo *</Label>
-                    <Input value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} placeholder="María López" className="mt-1" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Email *</Label>
-                    <Input value={nuevoEmail} onChange={e => setNuevoEmail(e.target.value)} placeholder="maria@taller.cl" className="mt-1" />
-                  </div>
+
+                {/* Rol siempre visible arriba */}
+                <div>
+                  <Label className="text-xs">Rol</Label>
+                  <select value={nuevoRol} onChange={e => { setNuevoRol(e.target.value); }}
+                    className="w-full mt-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+                    {Object.entries(ROLES).map(([key, val]) => (
+                      <option key={key} value={key}>{val.label}</option>
+                    ))}
+                  </select>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Contraseña *</Label>
-                    <div className="relative mt-1">
-                      <Input type={showPassword ? 'text' : 'password'} value={nuevoPassword}
-                        onChange={e => setNuevoPassword(e.target.value)} placeholder="Min. 6 caracteres" />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
+
+                {nuevoRol === 'CLIENTE' ? (
+                  <>
+                    <div>
+                      <Label className="text-xs">Tipo</Label>
+                      <select value={nuevoClienteTipo} onChange={e => setNuevoClienteTipo(e.target.value as any)}
+                        className="w-full mt-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
+                        <option value="EMPRESA">Empresa</option>
+                        <option value="PERSONA">Persona Natural</option>
+                      </select>
                     </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Rol</Label>
-                    <select value={nuevoRol} onChange={e => setNuevoRol(e.target.value)}
-                      className="w-full mt-1 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground">
-                      {Object.entries(ROLES).map(([key, val]) => (
-                        <option key={key} value={key}>{val.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">{nuevoClienteTipo === 'EMPRESA' ? 'Razón Social *' : 'Nombre completo *'}</Label>
+                        <Input value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} className="mt-1" />
+                      </div>
+                      <div>
+                        <Label className="text-xs">RUT *</Label>
+                        <Input value={nuevoClienteRut} onChange={e => setNuevoClienteRut(formatRutInput(e.target.value))} className="mt-1" />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Email *</Label>
+                        <Input value={nuevoEmail} onChange={e => setNuevoEmail(e.target.value)} className="mt-1" />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Teléfono</Label>
+                        <Input value={nuevoClienteTelefono} onChange={e => setNuevoClienteTelefono(e.target.value)} className="mt-1" />
+                      </div>
+                      {nuevoClienteTipo === 'EMPRESA' && (
+                        <div className="sm:col-span-2">
+                          <Label className="text-xs">Giro *</Label>
+                          <Input value={nuevoClienteGiro} onChange={e => setNuevoClienteGiro(e.target.value)} className="mt-1" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs">Contraseña *</Label>
+                      <div className="relative mt-1">
+                        <Input type={showPassword ? 'text' : 'password'} value={nuevoPassword}
+                          onChange={e => setNuevoPassword(e.target.value)} placeholder="Min. 6 caracteres" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Nombre completo *</Label>
+                        <Input value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} className="mt-1" />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Email *</Label>
+                        <Input value={nuevoEmail} onChange={e => setNuevoEmail(e.target.value)} className="mt-1" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Contraseña *</Label>
+                      <div className="relative mt-1">
+                        <Input type={showPassword ? 'text' : 'password'} value={nuevoPassword}
+                          onChange={e => setNuevoPassword(e.target.value)} placeholder="Min. 6 caracteres" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
                 <div className="flex gap-2 pt-1">
                   <Button onClick={crearUsuario} disabled={usuarioSaving} className="text-xs font-bold">
                     {usuarioSaving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
