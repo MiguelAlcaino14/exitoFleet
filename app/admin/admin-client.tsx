@@ -77,7 +77,7 @@ function LogoUploader({ currentUrl, onUploaded }: { currentUrl: string; onUpload
 const CAMPOS_TALLER = [
   {l:'Nombre *',k:'nombre'},{l:'Slug (URL)',k:'slug'},{l:'Razón Social *',k:'razonSocial'},
   {l:'RUT *',k:'rut'},{l:'Dirección *',k:'direccion'},{l:'Teléfono *',k:'telefono'},
-  {l:'Celular *',k:'celular'},{l:'Email *',k:'email'},{l:'Giro / División *',k:'division'},
+  {l:'Celular *',k:'celular'},{l:'Email *',k:'email'},{l:'Giro *',k:'division'},
 ];
 
 export default function AdminClient() {
