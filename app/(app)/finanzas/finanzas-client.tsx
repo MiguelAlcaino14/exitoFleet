@@ -213,7 +213,7 @@ export function FinanzasClient() {
                   </div>
                   <div>
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">MONTO NETO (sin IVA) *</label>
-                    <Input type="number" placeholder="Monto neto" value={facturaForm.montoNeto} onChange={(e) => setFacturaForm({ ...facturaForm, montoNeto: e.target.value })} className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" onWheel={(e: any) => e.target.blur()} />
+                    <Input type="number" min="0" placeholder="Monto neto" value={facturaForm.montoNeto} onChange={(e) => { const v = e.target.value; if (v === '' || parseFloat(v) >= 0) setFacturaForm({ ...facturaForm, montoNeto: v }); }} className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" onWheel={(e: any) => e.target.blur()} />
                     {facturaForm.montoNeto && (
                       <div className="text-[10px] text-muted-foreground mt-1">
                         IVA (19%): {formatCLP(Math.round(parseFloat(facturaForm.montoNeto) * 0.19))} — Total: {formatCLP(Math.round(parseFloat(facturaForm.montoNeto) * 1.19))}
