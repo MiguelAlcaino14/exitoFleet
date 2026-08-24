@@ -182,6 +182,7 @@ export function NuevaOTClient() {
       const data = await res.json();
       if (data?.found) {
         setVehiculo(data.vehiculo);
+        if (data.vehiculo?.lastKm) setKm(String(data.vehiculo.lastKm));
         setEsNuevo(false);
         setWizardStep(2);
         setScreen('formulario');
@@ -215,7 +216,6 @@ export function NuevaOTClient() {
     if (!nvModelo.trim()) errs.modelo = 'Modelo requerido';
     if (!nvAnio) errs.anio = 'Año requerido';
     if (!nvTipo) errs.tipo = 'Tipo requerido';
-    if (!nvVin.trim()) errs.vin = 'VIN / N° Chasis requerido';
     if (!ncRazonSocial.trim()) errs.razonSocial = 'Razón social requerida';
     if (!ncRut.trim()) errs.rut = 'RUT requerido';
     else if (!validarRut(ncRut)) errs.rut = 'RUT inválido — formato: 12.345.678-9';
@@ -223,7 +223,7 @@ export function NuevaOTClient() {
     if (!ncEmail.trim()) errs.email = 'Email requerido';
     else if (!validarEmail(ncEmail)) errs.email = 'Email inválido';
     if (ncTelefono.trim() && !validarTelefono(ncTelefono)) errs.telefono = 'Teléfono inválido';
-    if (ncTipoCliente === 'EMPRESA' && !ncDireccion.trim()) errs.direccion = 'Dirección requerida';
+    if (!ncDireccion.trim()) errs.direccion = 'Dirección requerida';
     setErrores1(errs);
     return Object.keys(errs).length === 0;
   };
@@ -487,7 +487,7 @@ export function NuevaOTClient() {
                           <FieldError msg={errores1.modelo} />
                         </div>
                         <div>
-                          <Label>Tipo *</Label>
+                          <Label>Tipo de vehículo *</Label>
                           <select value={nvTipo}
                             onChange={(e: any) => { setNvTipo(e.target.value); setErrores1(p => ({ ...p, tipo: '' })); }}
                             className={`w-full mt-1 bg-background border rounded-lg px-3 py-2 text-sm text-foreground ${errores1.tipo ? 'border-red-500' : 'border-border'}`}>
@@ -508,7 +508,7 @@ export function NuevaOTClient() {
                         </div>
                       </div>
                       <div>
-                        <Label>VIN / N° Chasis *</Label>
+                        <Label>VIN / N° Chasis</Label>
                         <Input className={`mt-1 ${errores1.vin ? 'border-red-500' : ''}`} value={nvVin}
                           onChange={(e: any) => { setNvVin(e.target.value); setErrores1(p => ({ ...p, vin: '' })); }}
                           placeholder="Número de chasis o VIN" />
@@ -564,15 +564,13 @@ export function NuevaOTClient() {
                               placeholder="+56 9 1234 5678" />
                             <FieldError msg={errores1.telefono} />
                           </div>
-                          {ncTipoCliente === 'EMPRESA' && (
-                            <div className="col-span-2">
-                              <Label>Dirección *</Label>
-                              <Input className={`mt-1 ${errores1.direccion ? 'border-red-500' : ''}`} value={ncDireccion}
-                                onChange={(e: any) => { setNcDireccion(e.target.value); setErrores1(p => ({ ...p, direccion: '' })); }}
-                                placeholder="Av. Ejemplo 1234, Santiago" />
-                              <FieldError msg={errores1.direccion} />
-                            </div>
-                          )}
+                          <div className="col-span-2">
+                            <Label>Dirección *</Label>
+                            <Input className={`mt-1 ${errores1.direccion ? 'border-red-500' : ''}`} value={ncDireccion}
+                              onChange={(e: any) => { setNcDireccion(e.target.value); setErrores1(p => ({ ...p, direccion: '' })); }}
+                              placeholder="Av. Ejemplo 1234, Santiago" />
+                            <FieldError msg={errores1.direccion} />
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -613,7 +611,7 @@ export function NuevaOTClient() {
                             className={`mt-1 font-mono ${errores2.km ? 'border-red-500' : ''}`}
                             value={km}
                             onChange={(e: any) => { setKm(e.target.value.replace(/[^0-9]/g, '')); setErrores2(p => ({ ...p, km: '' })); }}
-                            placeholder="54000"
+                            placeholder={vehiculo?.lastKm ? `Último: ${vehiculo.lastKm.toLocaleString('es-CL')}` : 'Ingrese kilometraje'}
                             inputMode="numeric"
                             style={{ MozAppearance: 'textfield' } as any}
                             onWheel={(e: any) => e.target.blur()}

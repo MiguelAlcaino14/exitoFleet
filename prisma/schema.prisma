@@ -166,7 +166,7 @@ model Vehiculo {
   anio            Int?
   motor           String?
   chasis          String?
-  vin             String?   @unique
+  vin             String?
   clienteId       String
   cliente         Cliente   @relation(fields: [clienteId], references: [id])
   tallerId        String?

@@ -40,7 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <div className="flex-1" />
             <ThemeToggleButton />
             <GlobalSearch />
-            <NotificationsBell />
+            <NotificationsBell userId={user.id} />
           </div>
         </header>
         {children}

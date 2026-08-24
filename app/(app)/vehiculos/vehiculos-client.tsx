@@ -8,8 +8,7 @@ import {
 } from 'lucide-react';
 
 const TIPOS_VEHICULO = [
-  'Camión', 'Tracto Camión', 'Furgón', 'Van', 'Bus', 'Minibus',
-  'Remolque', 'Semirremolque', 'Grúa', 'Maquinaria', 'Otro',
+  'Automovil', 'SUV', 'Camioneta', 'Furgon/Van', 'Camion', 'Bus/Minibus','Motocicleta', 'Otro',
 ];
 
 const anioActual = new Date().getFullYear();
@@ -95,15 +94,23 @@ export function VehiculosClient() {
     }
   }, [showNuevo]);
 
-  const PATENTE_RE = /^[A-Z]{2}\d{4}$|^[A-Z]{4}\d{2}$|^[A-Z]{2}\d{3}[A-Z]$/;
+  // Mínimo 5 alfanum, máximo 6 alfanum: motos (ABC12), autos nuevos (ABCD12), autos antiguos (AB1234)
+  const PATENTE_RE = /^[A-Z]{3}\d{2}$|^[A-Z]{4}\d{2}$|^[A-Z]{2}\d{3}$|^[A-Z]{2}\d{4}$|^[A-Z]{3}\d{3}$/;
 
   const handleCrearVehiculo = async () => {
     if (!nuevoData.patente?.trim()) { setCrearError('Patente es requerida'); return; }
     const patenteClean = nuevoData.patente.trim().toUpperCase().replace(/[\s-]/g, '');
-    if (!PATENTE_RE.test(patenteClean)) { setCrearError('Patente inválida. Formatos válidos: AB1234, ABCD12, AB123C'); return; }
+    if (!PATENTE_RE.test(patenteClean)) { setCrearError('Patente inválida. Formatos válidos: ABC-12 (moto), ABCD-12, AB-1234'); return; }
+    if (!nuevoData.vin?.trim()) { setCrearError('VIN/Chasis es requerido'); return; }
     if (!nuevoData.clienteId) { setCrearError('Debe seleccionar un cliente'); return; }
     setCreando(true); setCrearError('');
     try {
+      // Verificar patente duplicada
+      const chkRes = await fetch(`/api/vehiculos?buscar=${encodeURIComponent(nuevoData.patente.trim())}&page=1`);
+      const chkData = await chkRes.json();
+      const existe = (chkData.vehiculos ?? []).some((v: any) => v.patente?.toUpperCase() === nuevoData.patente.trim().toUpperCase());
+      if (existe) { setCrearError(`La patente ${nuevoData.patente.trim().toUpperCase()} ya está registrada en el sistema.`); setCreando(false); return; }
+
       const res = await fetch('/api/vehiculos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nuevoData) });
       const data = await res.json();
       if (!res.ok) { setCrearError(data.error || 'Error al crear'); setCreando(false); return; }
@@ -194,6 +201,109 @@ export function VehiculosClient() {
           </Button>
         </div>
       </div>
+
+      {/* Nuevo Vehículo — card inline */}
+      {showNuevo && (
+        <Card className="mb-6 border-primary/40">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><Truck className="w-4 h-4 text-primary" /></div>
+                <h3 className="font-semibold text-foreground text-base">Nuevo Vehículo</h3>
+              </div>
+              <button onClick={() => { setShowNuevo(false); setShowCrearCliente(false); setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' }); }} className="p-1 hover:bg-secondary rounded-lg" disabled={creando}><X className="w-4 h-4" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Patente *</label>
+                <Input value={nuevoData.patente} onChange={(e: any) => setNuevoData({ ...nuevoData, patente: e.target.value })} placeholder="XX-XX-00" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Tipo de vehículo *</label>
+                <select value={nuevoData.tipoVehiculo} onChange={(e: any) => setNuevoData({ ...nuevoData, tipoVehiculo: e.target.value })}
+                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
+                  <option value="">Selecciona un tipo</option>
+                  {TIPOS_VEHICULO.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Marca *</label>
+                <Input value={nuevoData.marca} onChange={(e: any) => setNuevoData({ ...nuevoData, marca: e.target.value })} placeholder="Volvo, Scania" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Modelo *</label>
+                <Input value={nuevoData.modelo} onChange={(e: any) => setNuevoData({ ...nuevoData, modelo: e.target.value })} placeholder="FH 540" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Año *</label>
+                <select value={nuevoData.anio} onChange={(e: any) => setNuevoData({ ...nuevoData, anio: e.target.value })}
+                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
+                  <option value="">Selecciona un año</option>
+                  {ANIOS.map(a => <option key={a} value={String(a)}>{a}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Motor</label>
+                <Input value={nuevoData.motor} onChange={(e: any) => setNuevoData({ ...nuevoData, motor: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">VIN / Chasis *</label>
+                <Input value={nuevoData.vin} onChange={(e: any) => setNuevoData({ ...nuevoData, vin: e.target.value, chasis: e.target.value })} placeholder="17 caracteres" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs text-muted-foreground mb-1 block">Cliente *</label>
+                <select value={nuevoData.clienteId}
+                  onChange={(e) => {
+                    if (e.target.value === '__nuevo__') { setShowCrearCliente(true); return; }
+                    setNuevoData({ ...nuevoData, clienteId: e.target.value });
+                  }}
+                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
+                  <option value="">Seleccionar cliente...</option>
+                  {clientes.map((c: any) => <option key={c.id} value={c.id}>{c.razonSocial || 'Sin nombre'} {c.rutEmpresa ? `(${c.rutEmpresa})` : ''}</option>)}
+                  <option value="__nuevo__">+ Agregar cliente</option>
+                </select>
+                {showCrearCliente && (
+                  <div className="mt-2 p-3 border border-primary/30 rounded-lg bg-primary/5 space-y-2">
+                    <p className="text-xs font-bold text-muted-foreground">Nuevo cliente</p>
+                    <Input value={nuevoClienteForm.razonSocial} onChange={e => setNuevoClienteForm({...nuevoClienteForm, razonSocial: e.target.value})}
+                      placeholder="Razón social o nombre" className="text-sm h-8" />
+                    <Input value={nuevoClienteForm.rutEmpresa} onChange={e => setNuevoClienteForm({...nuevoClienteForm, rutEmpresa: e.target.value})}
+                      placeholder="RUT (opcional)" className="text-sm h-8" />
+                    <Input value={nuevoClienteForm.email} onChange={e => setNuevoClienteForm({...nuevoClienteForm, email: e.target.value})}
+                      placeholder="Email (opcional)" className="text-sm h-8" type="email" />
+                    <div className="flex gap-2">
+                      <Button size="sm" disabled={creandoCliente || !nuevoClienteForm.razonSocial.trim()} onClick={async () => {
+                        setCreandoCliente(true);
+                        try {
+                          const res = await fetch('/api/clientes', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(nuevoClienteForm) });
+                          const d = await res.json();
+                          if (!res.ok) { toast.error(d.error || 'Error al crear cliente'); return; }
+                          setClientes(prev => [...prev, d]);
+                          setNuevoData((prev: any) => ({ ...prev, clienteId: d.id }));
+                          setShowCrearCliente(false);
+                          setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' });
+                          toast.success('Cliente creado');
+                        } catch { toast.error('Error'); } finally { setCreandoCliente(false); }
+                      }} className="text-xs h-7">
+                        {creandoCliente ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                        {creandoCliente ? 'Creando...' : 'Crear cliente'}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setShowCrearCliente(false)} className="text-xs h-7">Cancelar</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            {crearError && <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-3"><p className="text-sm text-red-400">{crearError}</p></div>}
+            <div className="flex gap-3 justify-end mt-4">
+              <Button variant="outline" size="sm" onClick={() => { setShowNuevo(false); setShowCrearCliente(false); }} disabled={creando}><X className="w-4 h-4 mr-1" /> Cancelar</Button>
+              <Button size="sm" onClick={handleCrearVehiculo} disabled={creando} className="bg-primary text-primary-foreground">
+                {creando ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />} {creando ? 'Creando...' : 'Crear Vehículo'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Table */}
       {loading ? (
@@ -342,106 +452,6 @@ export function VehiculosClient() {
               <Button variant="outline" size="sm" onClick={() => { setDeleteId(null); setDeleteError(''); }} disabled={deleting}>Cancelar</Button>
               <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
                 {deleting ? 'Eliminando...' : 'Eliminar'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Nuevo Vehículo Modal */}
-      {showNuevo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!creando) { setShowNuevo(false); setShowCrearCliente(false); setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' }); } }}>
-          <div className="bg-card border border-border rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-semibold text-foreground text-lg">Nuevo Vehículo</h3>
-              <button onClick={() => { setShowNuevo(false); setShowCrearCliente(false); setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' }); }} className="p-1 hover:bg-secondary rounded-lg"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Patente *</label>
-                <Input value={nuevoData.patente} onChange={(e: any) => setNuevoData({ ...nuevoData, patente: e.target.value })} placeholder="XX-XX-00" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Tipo *</label>
-                <select value={nuevoData.tipoVehiculo} onChange={(e: any) => setNuevoData({ ...nuevoData, tipoVehiculo: e.target.value })}
-                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
-                  <option value="">Selecciona un tipo</option>
-                  {TIPOS_VEHICULO.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Marca *</label>
-                <Input value={nuevoData.marca} onChange={(e: any) => setNuevoData({ ...nuevoData, marca: e.target.value })} placeholder="Volvo, Scania" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Modelo *</label>
-                <Input value={nuevoData.modelo} onChange={(e: any) => setNuevoData({ ...nuevoData, modelo: e.target.value })} placeholder="FH 540" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Año *</label>
-                <select value={nuevoData.anio} onChange={(e: any) => setNuevoData({ ...nuevoData, anio: e.target.value })}
-                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
-                  <option value="">Selecciona un año</option>
-                  {ANIOS.map(a => <option key={a} value={String(a)}>{a}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Motor</label>
-                <Input value={nuevoData.motor} onChange={(e: any) => setNuevoData({ ...nuevoData, motor: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">VIN / Chasis</label>
-                <Input value={nuevoData.vin} onChange={(e: any) => setNuevoData({ ...nuevoData, vin: e.target.value, chasis: e.target.value })} />
-              </div>
-              <div className="col-span-2">
-                <label className="text-xs text-muted-foreground mb-1 block">Cliente *</label>
-                <select value={nuevoData.clienteId}
-                  onChange={(e) => {
-                    if (e.target.value === '__nuevo__') { setShowCrearCliente(true); return; }
-                    setNuevoData({ ...nuevoData, clienteId: e.target.value });
-                  }}
-                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
-                  <option value="">Seleccionar cliente...</option>
-                  {clientes.map((c: any) => <option key={c.id} value={c.id}>{c.razonSocial || 'Sin nombre'} {c.rutEmpresa ? `(${c.rutEmpresa})` : ''}</option>)}
-                  <option value="__nuevo__">+ Agregar cliente</option>
-                </select>
-                {showCrearCliente && (
-                  <div className="mt-2 p-3 border border-primary/30 rounded-lg bg-primary/5 space-y-2">
-                    <p className="text-xs font-bold text-muted-foreground">Nuevo cliente</p>
-                    <Input value={nuevoClienteForm.razonSocial} onChange={e => setNuevoClienteForm({...nuevoClienteForm, razonSocial: e.target.value})}
-                      placeholder="Razón social o nombre" className="text-sm h-8" />
-                    <Input value={nuevoClienteForm.rutEmpresa} onChange={e => setNuevoClienteForm({...nuevoClienteForm, rutEmpresa: e.target.value})}
-                      placeholder="RUT (opcional)" className="text-sm h-8" />
-                    <Input value={nuevoClienteForm.email} onChange={e => setNuevoClienteForm({...nuevoClienteForm, email: e.target.value})}
-                      placeholder="Email (opcional)" className="text-sm h-8" type="email" />
-                    <div className="flex gap-2">
-                      <Button size="sm" disabled={creandoCliente || !nuevoClienteForm.razonSocial.trim()} onClick={async () => {
-                        setCreandoCliente(true);
-                        try {
-                          const res = await fetch('/api/clientes', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(nuevoClienteForm) });
-                          const d = await res.json();
-                          if (!res.ok) { toast.error(d.error || 'Error al crear cliente'); return; }
-                          setClientes(prev => [...prev, d]);
-                          setNuevoData((prev: any) => ({ ...prev, clienteId: d.id }));
-                          setShowCrearCliente(false);
-                          setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' });
-                          toast.success('Cliente creado');
-                        } catch { toast.error('Error'); } finally { setCreandoCliente(false); }
-                      }} className="text-xs h-7">
-                        {creandoCliente ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-                        {creandoCliente ? 'Creando...' : 'Crear cliente'}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setShowCrearCliente(false)} className="text-xs h-7">Cancelar</Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            {crearError && <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-3"><p className="text-sm text-red-400">{crearError}</p></div>}
-            <div className="flex gap-3 justify-end mt-5">
-              <Button variant="outline" size="sm" onClick={() => { setShowNuevo(false); setShowCrearCliente(false); }} disabled={creando}><X className="w-4 h-4 mr-1" /> Cancelar</Button>
-              <Button size="sm" onClick={handleCrearVehiculo} disabled={creando} className="bg-primary text-primary-foreground">
-                {creando ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />} {creando ? 'Creando...' : 'Crear Vehículo'}
               </Button>
             </div>
           </div>

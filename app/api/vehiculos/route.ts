@@ -72,6 +72,12 @@ export async function POST(req: NextRequest) {
     const existe = await prisma.vehiculo.findFirst({ where: { patente: body.patente.trim().toUpperCase() } });
     if (existe) return NextResponse.json({ error: 'Ya existe un vehículo con esa patente' }, { status: 400 });
 
+    const vinLimpio = body.vin?.trim() || null;
+    if (vinLimpio) {
+      const existeVin = await prisma.vehiculo.findFirst({ where: { vin: vinLimpio } });
+      if (existeVin) return NextResponse.json({ error: `El VIN ${vinLimpio} ya está registrado en el vehículo ${existeVin.patente}` }, { status: 400 });
+    }
+
     const vehiculo = await prisma.vehiculo.create({
       data: {
         patente: body.patente.trim().toUpperCase(),
@@ -80,8 +86,8 @@ export async function POST(req: NextRequest) {
         tipoVehiculo: body.tipoVehiculo?.trim() || null,
         anio: body.anio ? parseInt(body.anio) : null,
         motor: body.motor?.trim() || null,
-        chasis: body.chasis?.trim() || null,
-        vin: body.vin?.trim() || null,
+        chasis: vinLimpio,
+        vin: vinLimpio,
         clienteId: body.clienteId,
         tallerId: (await getTallerScope())?.tallerId ?? undefined,
       },

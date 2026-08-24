@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     if (!body.razonSocial?.trim()) return NextResponse.json({ error: 'Razón social es requerida' }, { status: 400 });
+    if (!body.direccion?.trim()) return NextResponse.json({ error: 'Dirección es requerida' }, { status: 400 });
+    const tipoCliente = body.tipoCliente === 'PERSONA' ? 'PERSONA' : 'EMPRESA';
+    if (tipoCliente !== 'PERSONA' && !body.giro?.trim()) return NextResponse.json({ error: 'Giro es requerido' }, { status: 400 });
 
     if (body.rutEmpresa) {
       const existe = await prisma.cliente.findFirst({ where: { rutEmpresa: body.rutEmpresa.trim() } });
@@ -45,7 +48,8 @@ export async function POST(req: NextRequest) {
         nombreContacto: body.nombreContacto?.trim() || null,
         email: body.email?.trim() || null,
         telefono: body.telefono?.trim() || null,
-        direccion: body.direccion?.trim() || null,
+        direccion: body.direccion.trim(),
+        tipoCliente,
         tallerId: (await getTallerScope())?.tallerId ?? undefined,
       },
       include: { vehiculos: true, _count: { select: { vehiculos: true } } },

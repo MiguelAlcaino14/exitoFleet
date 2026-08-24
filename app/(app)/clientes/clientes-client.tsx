@@ -70,6 +70,8 @@ export function ClientesClient() {
     if (!nuevoForm.telefono.trim()) errs.telefono = 'Teléfono requerido';
     else if (!validarTelefono(nuevoForm.telefono)) errs.telefono = 'Teléfono inválido';
     if (tipoCliente === 'empresa' && !nuevoForm.nombreContacto.trim()) errs.nombreContacto = 'Nombre de contacto requerido';
+    if (tipoCliente === 'empresa' && !nuevoForm.giro.trim()) errs.giro = 'Giro requerido';
+    if (!nuevoForm.direccion.trim()) errs.direccion = 'Dirección requerida';
     setCrearErrores(errs);
     if (Object.keys(errs).length > 0) return;
 
@@ -318,8 +320,9 @@ export function ClientesClient() {
               </div>
               {tipoCliente === 'empresa' && (
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Giro</label>
-                  <Input value={nuevoForm.giro} onChange={(e: any) => setNuevoForm({ ...nuevoForm, giro: e.target.value })} placeholder="Transporte de carga" />
+                  <label className="text-xs text-muted-foreground mb-1 block">Giro *</label>
+                  <Input value={nuevoForm.giro} onChange={(e: any) => { setNuevoForm({ ...nuevoForm, giro: e.target.value }); setCrearErrores(p => ({ ...p, giro: '' })); }} placeholder="Transporte de carga" className={crearErrores.giro ? 'border-red-500' : ''} />
+                  {crearErrores.giro && <p className="text-xs text-red-500 mt-1">{crearErrores.giro}</p>}
                 </div>
               )}
               {tipoCliente === 'empresa' && (
@@ -349,8 +352,9 @@ export function ClientesClient() {
                 {crearErrores.telefono && <p className="text-xs text-red-500 mt-1">{crearErrores.telefono}</p>}
               </div>
               <div className="sm:col-span-2">
-                <label className="text-xs text-muted-foreground mb-1 block">Dirección</label>
-                <Input value={nuevoForm.direccion} onChange={(e: any) => setNuevoForm({ ...nuevoForm, direccion: e.target.value })} placeholder="Av. Principal 123, Santiago" />
+                <label className="text-xs text-muted-foreground mb-1 block">Dirección *</label>
+                <Input value={nuevoForm.direccion} onChange={(e: any) => { setNuevoForm({ ...nuevoForm, direccion: e.target.value }); setCrearErrores(p => ({ ...p, direccion: '' })); }} placeholder="Av. Principal 123, Santiago" className={crearErrores.direccion ? 'border-red-500' : ''} />
+                {crearErrores.direccion && <p className="text-xs text-red-500 mt-1">{crearErrores.direccion}</p>}
               </div>
             </div>
             {crearError && <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-3"><p className="text-sm text-red-400">{crearError}</p></div>}

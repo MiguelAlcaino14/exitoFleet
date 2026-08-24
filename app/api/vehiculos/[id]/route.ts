@@ -23,8 +23,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (body?.tipoVehiculo !== undefined) data.tipoVehiculo = body.tipoVehiculo || null;
     if (body?.anio !== undefined) data.anio = body.anio ? parseInt(body.anio) : null;
     if (body?.motor !== undefined) data.motor = body.motor || null;
-    if (body?.chasis !== undefined) data.chasis = body.chasis || null;
-    if (body?.vin !== undefined) data.vin = body.vin || null;
+    if (body?.chasis !== undefined) data.chasis = body.chasis?.trim() || null;
+    if (body?.vin !== undefined) {
+      const vinLimpio = body.vin?.trim() || null;
+      if (vinLimpio) {
+        const existeVin = await prisma.vehiculo.findFirst({ where: { vin: vinLimpio, id: { not: params.id } } });
+        if (existeVin) return NextResponse.json({ error: `El VIN ${vinLimpio} ya está registrado en el vehículo ${existeVin.patente}` }, { status: 400 });
+      }
+      data.vin = vinLimpio;
+      data.chasis = vinLimpio;
+    }
     if (body?.clienteId !== undefined) data.clienteId = body.clienteId;
 
     const updated = await prisma.vehiculo.update({
@@ -40,7 +48,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   } catch (err: any) {
     console.error('Vehiculo PATCH error:', err);
     if (err?.code === 'P2002') {
-      return NextResponse.json({ error: 'Ya existe un vehículo con esa patente' }, { status: 400 });
+      const field = err?.meta?.target?.includes('patente') ? 'patente' : 'campo';
+      return NextResponse.json({ error: `Ya existe un vehículo con ese ${field}` }, { status: 400 });
     }
     return NextResponse.json({ error: 'Error al actualizar vehículo' }, { status: 500 });
   }

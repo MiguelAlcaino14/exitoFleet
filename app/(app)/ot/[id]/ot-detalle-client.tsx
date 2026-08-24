@@ -180,11 +180,12 @@ export function OTDetalleClient({ otId }: { otId: string }) {
         fetch('/api/cuentas-correo').then(r => r.json()),
         clienteId ? fetch(`/api/clientes/${clienteId}/contactos`).then(r => r.json()) : Promise.resolve([]),
       ]);
-      setCuentasCorreo(resCuentas ?? []);
-      setContactos(resContactos ?? []);
-      if (resCuentas?.length > 0) {
-        const pred = resCuentas.find((c: any) => c.predeterminada);
-        setCuentaSeleccionada(pred?.id ?? resCuentas[0].id);
+      const cuentas = Array.isArray(resCuentas) ? resCuentas : (resCuentas?.cuentas ?? []);
+      setCuentasCorreo(cuentas);
+      setContactos(Array.isArray(resContactos) ? resContactos : (resContactos?.contactos ?? []));
+      if (cuentas.length > 0) {
+        const pred = cuentas.find((c: any) => c.predeterminada);
+        setCuentaSeleccionada(pred?.id ?? cuentas[0].id);
       }
       setDestinatarios([]);
       setEmailManual('');
@@ -1022,15 +1023,17 @@ export function OTDetalleClient({ otId }: { otId: string }) {
               {/* ═══ FOTOS TAB ═══ */}
               {tab === 'fotos' && (
                 <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <label className="cursor-pointer">
-                      <input type="file" accept="image/*" className="hidden" onChange={handleUploadFoto} />
-                      <div className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition">
-                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                        Subir Fotografía
-                      </div>
-                    </label>
-                  </div>
+                  {fotos.length > 0 && (
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <label className="cursor-pointer">
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUploadFoto} />
+                        <div className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition">
+                          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          Subir Fotografía
+                        </div>
+                      </label>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {fotos.map((foto: any) => (
                       <div key={foto.id} className="relative aspect-square rounded-lg overflow-hidden border border-border bg-muted">
@@ -1042,7 +1045,16 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                     {fotos.length === 0 && (
                       <div className="col-span-full text-center py-12 text-muted-foreground">
                         <Camera className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                        <p className="text-sm">Sin fotografías. Usa el botón de arriba para subir.</p>
+                        <p className="text-sm">Sin fotografías. Usa el botón de abajo para subir.</p>
+                        <div className="flex items-center justify-center mt-4">
+                          <label className="cursor-pointer">
+                            <input type="file" accept="image/*" className="hidden" onChange={handleUploadFoto} />
+                            <div className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary/90 transition">
+                              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                              Subir Fotografía
+                            </div>
+                          </label>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1188,7 +1200,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
           <div className="grid grid-cols-2 gap-3 print:hidden">
             <button onClick={() => window.print()}
               className="flex items-center justify-center gap-2 h-14 rounded-lg bg-primary text-primary-foreground font-black text-xs tracking-widest hover:bg-primary/90 transition">
-              <Printer className="w-4 h-4" /> IMPRIMIR
+              <Printer className="w-4 h-4" /> Imprimir
             </button>
             <button onClick={abrirModalEnviar}
               className="flex items-center justify-center gap-2 h-14 rounded-lg border-2 border-primary text-primary font-black text-xs tracking-widest hover:bg-primary/10 transition">

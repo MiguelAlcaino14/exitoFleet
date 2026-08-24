@@ -20,7 +20,13 @@ export async function GET(req: NextRequest) {
       include: { cliente: true },
     });
     if (!vehiculo) return NextResponse.json({ found: false });
-    return NextResponse.json({ found: true, vehiculo });
+    // Último km registrado en OTs de este vehículo
+    const lastOt = await prisma.ordenTrabajo.findFirst({
+      where: { vehiculoId: vehiculo.id, kilometraje: { not: null } },
+      orderBy: { fechaIngreso: 'desc' },
+      select: { kilometraje: true },
+    });
+    return NextResponse.json({ found: true, vehiculo: { ...vehiculo, lastKm: lastOt?.kilometraje ?? null } });
   } catch (err: any) {
     console.error('Buscar vehículo error:', err);
     return NextResponse.json({ error: 'Error al buscar' }, { status: 500 });

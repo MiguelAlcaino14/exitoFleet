@@ -77,6 +77,8 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
 
   const guardar = async () => {
     if (!form.razonSocial?.trim()) { toast.error('Nombre/Razón social requerido'); return; }
+    if (form.tipoCliente !== 'PERSONA' && !form.giro?.trim()) { toast.error('Giro requerido'); return; }
+    if (!form.direccion?.trim()) { toast.error('Dirección requerida'); return; }
     if (form.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) { toast.error('Email inválido'); return; }
     if (form.telefono?.trim() && !/^\d{8,15}$/.test(form.telefono.replace(/[\s+]/g, ''))) { toast.error('Teléfono inválido'); return; }
     setSaving(true);
@@ -174,9 +176,9 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
                 {[
                   { label: form.tipoCliente === 'PERSONA' ? 'NOMBRE' : 'RAZÓN SOCIAL', key: 'razonSocial' },
                   { label: 'RUT', key: 'rutEmpresa' },
-                  ...(form.tipoCliente !== 'PERSONA' ? [{ label: 'GIRO', key: 'giro' }] : []),
+                  ...(form.tipoCliente !== 'PERSONA' ? [{ label: 'GIRO *', key: 'giro' }] : []),
                   { label: 'CONTACTO PRINCIPAL', key: 'nombreContacto' }, { label: 'EMAIL', key: 'email' },
-                  { label: 'TELÉFONO', key: 'telefono' }, { label: 'DIRECCIÓN', key: 'direccion' },
+                  { label: 'TELÉFONO', key: 'telefono' }, { label: 'DIRECCIÓN *', key: 'direccion' },
                 ].map(f => (
                   <div key={f.key}>
                     <label className="text-[10px] font-bold tracking-wider text-muted-foreground mb-1 block">{f.label}</label>
@@ -185,7 +187,7 @@ export function ClienteDetalleClient({ clienteId }: { clienteId: string }) {
                 ))}
               </div>
               <div className="flex gap-2 pt-2">
-                <Button size="sm" onClick={guardar} disabled={saving || !form.razonSocial} className="text-xs bg-primary hover:bg-primary/90">
+                <Button size="sm" onClick={guardar} disabled={saving || !form.razonSocial?.trim() || !form.direccion?.trim() || (form.tipoCliente !== 'PERSONA' && !form.giro?.trim())} className="text-xs bg-primary hover:bg-primary/90">
                   <Save className="w-3 h-3 mr-1" /> {saving ? 'Guardando...' : 'Guardar'}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => { setEditando(false); setForm({ tipoCliente: cliente.tipoCliente ?? 'EMPRESA', razonSocial: cliente.razonSocial, rutEmpresa: cliente.rutEmpresa ?? '', giro: cliente.giro ?? '', nombreContacto: cliente.nombreContacto ?? '', email: cliente.email ?? '', telefono: cliente.telefono ?? '', direccion: cliente.direccion ?? '' }); }} className="text-xs">

@@ -45,10 +45,16 @@ export function HistorialClient() {
 
   // Filters
   const [buscar, setBuscar] = useState('');
+  const [debouncedBuscar, setDebouncedBuscar] = useState('');
   const [estado, setEstado] = useState('TODAS');
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedBuscar(buscar), 300);
+    return () => clearTimeout(t);
+  }, [buscar]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -56,7 +62,7 @@ export function HistorialClient() {
       const params = new URLSearchParams();
       params.set('page', String(page));
       if (estado !== 'TODAS') params.set('estado', estado);
-      if (buscar) params.set('buscar', buscar);
+      if (debouncedBuscar) params.set('buscar', debouncedBuscar);
       if (desde) params.set('desde', desde);
       if (hasta) params.set('hasta', hasta);
 
@@ -71,12 +77,12 @@ export function HistorialClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, estado, buscar, desde, hasta]);
+  }, [page, estado, debouncedBuscar, desde, hasta]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // Reset page when filters change
-  useEffect(() => { setPage(1); }, [estado, buscar, desde, hasta]);
+  useEffect(() => { setPage(1); }, [estado, debouncedBuscar, desde, hasta]);
 
   const getStatCount = (est: string) => {
     const s = stats.find((s: any) => s.estado === est);

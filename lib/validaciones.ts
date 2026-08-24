@@ -17,7 +17,7 @@ export function validarRut(rut: string): boolean {
 }
 
 export function formatRutInput(raw: string): string {
-  const clean = raw.replace(/[^0-9kK]/g, '').toUpperCase();
+  const clean = raw.replace(/[^0-9kK]/g, '').toUpperCase().slice(0, 9);
   if (clean.length === 0) return '';
   const dv = clean.slice(-1);
   const body = clean.slice(0, -1);
@@ -53,8 +53,10 @@ export function validarEmail(email: string): boolean {
 export function validarPatente(patente: string): boolean {
   if (!patente?.trim()) return false;
   const clean = patente.trim().toUpperCase().replace(/\s/g, '');
-  // Auto nuevo: ABCD-12 | Auto antiguo: AB-1234 | Moto/remolque: A-1234, AB-123, ABC-NNN
-  return /^[A-Z]{1,4}-\d{2,5}$/.test(clean);
+  // Mínimo 5 alfanum, máximo 6 alfanum (sin guión): ABC-12, ABCD-12, AB-1234, AB-123
+  const alfanum = clean.replace('-', '');
+  if (alfanum.length < 5 || alfanum.length > 6) return false;
+  return /^[A-Z]{2,4}-\d{2,4}$/.test(clean);
 }
 
 export function formatPatenteInput(raw: string): string {

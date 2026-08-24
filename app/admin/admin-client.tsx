@@ -20,6 +20,7 @@ const ROLES_LABELS: Record<string, string> = {
   JEFE_TALLER: 'Jefe de Taller',
   RECEPCION: 'Recepción',
   FINANZAS: 'Finanzas',
+  CLIENTE: 'Cliente',
 };
 
 function LogoUploader({ currentUrl, onUploaded }: { currentUrl: string; onUploaded: (url: string) => void }) {
@@ -335,7 +336,7 @@ export default function AdminClient() {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground hidden sm:inline">{(session?.user as any)?.email}</span>
-            <NotificationsBell />
+            <NotificationsBell userId={(session?.user as any)?.id ?? ''} />
             <ThemeToggleButton />
             <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: '/auth/login' })} className="text-muted-foreground">
               <LogOut className="w-4 h-4 mr-1" /> Salir
@@ -358,7 +359,7 @@ export default function AdminClient() {
 
         {/* Tabs (hidden when showing detail) */}
         {tab !== 'detalle' && (
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex flex-wrap items-center gap-2 mb-6">
             <button onClick={() => setTab('talleres')}
               className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'talleres' ? 'border-[hsl(217,74%,45%)] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
               <Building2 className="w-4 h-4 inline mr-2" /> Talleres
@@ -367,18 +368,18 @@ export default function AdminClient() {
               className={`px-5 py-3 text-xs font-bold tracking-widest uppercase rounded-t-md border-b-2 transition ${tab === 'nuevo' ? 'border-[hsl(217,74%,45%)] text-foreground bg-card' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
               <Plus className="w-4 h-4 inline mr-2" /> Nuevo Taller
             </button>
+            {tab === 'talleres' && talleres.length > 3 && (
+              <div className="relative ml-auto w-full sm:w-auto sm:min-w-[220px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input placeholder="Buscar taller..." value={filtro} onChange={e => setFiltro(e.target.value)} className="pl-9" />
+              </div>
+            )}
           </div>
         )}
 
         {/* TALLERES LIST */}
         {tab === 'talleres' && (
           <div>
-            {talleres.length > 3 && (
-              <div className="relative mb-4 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Buscar taller..." value={filtro} onChange={e => setFiltro(e.target.value)} className="pl-9" />
-              </div>
-            )}
             <div className="space-y-4">
               {talleresFiltrados.map((t: any) => (
                 <Card key={t.id} className={`border transition hover:border-[hsl(217,74%,45%)]/40 cursor-pointer ${!t.activo ? 'opacity-50' : ''}`}>
@@ -424,15 +425,17 @@ export default function AdminClient() {
                             </TooltipProvider>
                           </div>
                         </div>
-                        <div className="flex gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                          <Button variant="outline" size="sm" onClick={() => startEdit(t)} className="text-xs">
-                            <Pencil className="w-3 h-3 mr-1" /> Editar
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => { verDetalle(t.id); setShowNuevoUsuario(true); }} className="text-xs">
-                            <Plus className="w-3 h-3 mr-1" /> Usuario
-                          </Button>
+                        <div className="flex flex-col gap-1.5 flex-shrink-0 items-end" onClick={e => e.stopPropagation()}>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => startEdit(t)} className="text-xs">
+                              <Pencil className="w-3 h-3 mr-1" /> Editar
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => { verDetalle(t.id); setShowNuevoUsuario(true); }} className="text-xs">
+                              <Plus className="w-3 h-3 mr-1" /> Usuario
+                            </Button>
+                          </div>
                           <Button variant="outline" size="sm" onClick={() => eliminarTaller(t.id, t.nombre)} className="text-xs border-red-500/40 text-red-500 hover:bg-red-500/10 hover:text-red-500">
-                            <X className="w-3 h-3 mr-1" /> Eliminar
+                            <X className="w-3 h-3 mr-1" /> Eliminar taller
                           </Button>
                         </div>
                       </div>
@@ -637,21 +640,21 @@ export default function AdminClient() {
                                     <td colSpan={5} className="px-3 py-3">
                                       <div className="flex flex-wrap gap-2 items-end">
                                         <div>
-                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">NOMBRE</label>
+                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">Nombre</label>
                                           <Input className="h-7 text-xs w-40" value={euNombre} onChange={e => setEuNombre(e.target.value)} />
                                         </div>
                                         <div>
-                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">EMAIL</label>
+                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">Email</label>
                                           <Input type="email" className={`h-7 text-xs w-44 ${euEmail && !validarEmail(euEmail) ? 'border-red-500' : ''}`} value={euEmail} onChange={e => setEuEmail(e.target.value)} />
                                         </div>
                                         <div>
-                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">ROL</label>
+                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">Rol</label>
                                           <select value={euRol} onChange={e => setEuRol(e.target.value)} className="h-7 text-xs px-2 rounded border border-border bg-background">
                                             {Object.entries(ROLES_LABELS).filter(([k]) => k !== 'SUPER_ADMIN').map(([k, v]) => <option key={k} value={k}>{v as string}</option>)}
                                           </select>
                                         </div>
                                         <div>
-                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">NUEVA CONTRASEÑA (opcional)</label>
+                                          <label className="text-[9px] font-bold text-muted-foreground block mb-1">Nueva Contraseña (opcional)</label>
                                           <Input type="password" className="h-7 text-xs w-36" value={euPassword} onChange={e => setEuPassword(e.target.value)} placeholder="Dejar vacío = sin cambio" />
                                         </div>
                                         <Button size="sm" className="h-7 text-xs" onClick={() => editarUsuario(detalle.id)} disabled={euSaving}>

@@ -43,6 +43,9 @@ export async function POST(req: NextRequest) {
 
       if (!clienteId && nv?.nuevoCliente) {
         const nc = nv.nuevoCliente;
+        if (!nc?.direccion?.trim()) return NextResponse.json({ error: 'Dirección es requerida' }, { status: 400 });
+        const tipoCliente = nc?.tipoCliente === 'PERSONA' ? 'PERSONA' : 'EMPRESA';
+        if (tipoCliente !== 'PERSONA' && !nc?.giro?.trim()) return NextResponse.json({ error: 'Giro es requerido' }, { status: 400 });
         if (nc?.rutEmpresa) {
           const existing = await prisma.cliente.findFirst({ where: { rutEmpresa: nc.rutEmpresa, tallerId: tid } });
           if (existing) clienteId = existing.id;

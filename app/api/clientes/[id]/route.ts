@@ -103,6 +103,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
     if (!cliente) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
 
+    const tipoCliente = body?.tipoCliente !== undefined && ['EMPRESA', 'PERSONA'].includes(body.tipoCliente)
+      ? body.tipoCliente
+      : cliente.tipoCliente;
+    const direccion = body?.direccion !== undefined ? body.direccion : cliente.direccion;
+    const giro = body?.giro !== undefined ? body.giro : cliente.giro;
+
+    if (!direccion?.trim()) return NextResponse.json({ error: 'Dirección es requerida' }, { status: 400 });
+    if (tipoCliente !== 'PERSONA' && !giro?.trim()) return NextResponse.json({ error: 'Giro es requerido' }, { status: 400 });
+
     const data: any = {};
     if (body?.tipoCliente !== undefined && ['EMPRESA', 'PERSONA'].includes(body.tipoCliente)) data.tipoCliente = body.tipoCliente;
     if (body?.razonSocial !== undefined) data.razonSocial = body.razonSocial;
