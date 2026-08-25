@@ -53,7 +53,7 @@ export function VehiculosClient() {
 
   // Crear cliente inline (C5)
   const [showCrearCliente, setShowCrearCliente] = useState(false);
-  const [nuevoClienteForm, setNuevoClienteForm] = useState({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' });
+  const [nuevoClienteForm, setNuevoClienteForm] = useState({ tipoCliente: 'EMPRESA', razonSocial: '', rutEmpresa: '', giro: '', email: '', telefono: '', direccion: '' });
   const [creandoCliente, setCreandoCliente] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -119,7 +119,7 @@ export function VehiculosClient() {
       setShowNuevo(false);
       setNuevoData({ patente: '', marca: '', modelo: '', tipoVehiculo: '', anio: '', motor: '', chasis: '', vin: '', clienteId: '' });
       setShowCrearCliente(false);
-      setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' });
+      setNuevoClienteForm({ tipoCliente: 'EMPRESA', razonSocial: '', rutEmpresa: '', giro: '', email: '', telefono: '', direccion: '' });
       toast.success('Vehículo creado');
     } catch { setCrearError('Error de conexión'); } finally { setCreando(false); }
   };
@@ -218,28 +218,31 @@ export function VehiculosClient() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Patente *</label>
-                <Input value={nuevoData.patente} onChange={(e: any) => setNuevoData({ ...nuevoData, patente: e.target.value })} placeholder="XX-XX-00" />
+                <Input value={nuevoData.patente} onChange={(e: any) => setNuevoData({ ...nuevoData, patente: e.target.value })} placeholder="XX-XX-00"
+                  className={!nuevoData.patente?.trim() ? 'border-red-400 focus-visible:ring-red-400' : ''} />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Tipo de vehículo *</label>
                 <select value={nuevoData.tipoVehiculo} onChange={(e: any) => setNuevoData({ ...nuevoData, tipoVehiculo: e.target.value })}
-                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
+                  className={`w-full h-9 rounded-md border bg-background px-3 text-sm text-foreground ${!nuevoData.tipoVehiculo ? 'border-red-400' : 'border-border'}`}>
                   <option value="">Selecciona un tipo</option>
                   {TIPOS_VEHICULO.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Marca *</label>
-                <Input value={nuevoData.marca} onChange={(e: any) => setNuevoData({ ...nuevoData, marca: e.target.value })} placeholder="Volvo, Scania" />
+                <Input value={nuevoData.marca} onChange={(e: any) => setNuevoData({ ...nuevoData, marca: e.target.value })} placeholder="Volvo, Scania"
+                  className={!nuevoData.marca?.trim() ? 'border-red-400 focus-visible:ring-red-400' : ''} />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Modelo *</label>
-                <Input value={nuevoData.modelo} onChange={(e: any) => setNuevoData({ ...nuevoData, modelo: e.target.value })} placeholder="FH 540" />
+                <Input value={nuevoData.modelo} onChange={(e: any) => setNuevoData({ ...nuevoData, modelo: e.target.value })} placeholder="FH 540"
+                  className={!nuevoData.modelo?.trim() ? 'border-red-400 focus-visible:ring-red-400' : ''} />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Año *</label>
                 <select value={nuevoData.anio} onChange={(e: any) => setNuevoData({ ...nuevoData, anio: e.target.value })}
-                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
+                  className={`w-full h-9 rounded-md border bg-background px-3 text-sm text-foreground ${!nuevoData.anio ? 'border-red-400' : 'border-border'}`}>
                   <option value="">Selecciona un año</option>
                   {ANIOS.map(a => <option key={a} value={String(a)}>{a}</option>)}
                 </select>
@@ -250,7 +253,8 @@ export function VehiculosClient() {
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">VIN / Chasis *</label>
-                <Input value={nuevoData.vin} onChange={(e: any) => setNuevoData({ ...nuevoData, vin: e.target.value, chasis: e.target.value })} placeholder="17 caracteres" />
+                <Input value={nuevoData.vin} onChange={(e: any) => setNuevoData({ ...nuevoData, vin: e.target.value, chasis: e.target.value })} placeholder="17 caracteres"
+                  className={!nuevoData.vin?.trim() ? 'border-red-400 focus-visible:ring-red-400' : ''} />
               </div>
               <div className="col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">Cliente *</label>
@@ -259,22 +263,39 @@ export function VehiculosClient() {
                     if (e.target.value === '__nuevo__') { setShowCrearCliente(true); return; }
                     setNuevoData({ ...nuevoData, clienteId: e.target.value });
                   }}
-                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground">
+                  className={`w-full h-9 rounded-md border bg-background px-3 text-sm text-foreground ${!nuevoData.clienteId ? 'border-red-400' : 'border-border'}`}>
                   <option value="">Seleccionar cliente...</option>
                   {clientes.map((c: any) => <option key={c.id} value={c.id}>{c.razonSocial || 'Sin nombre'} {c.rutEmpresa ? `(${c.rutEmpresa})` : ''}</option>)}
                   <option value="__nuevo__">+ Agregar cliente</option>
                 </select>
                 {showCrearCliente && (
-                  <div className="mt-2 p-3 border border-primary/30 rounded-lg bg-primary/5 space-y-2">
-                    <p className="text-xs font-bold text-muted-foreground">Nuevo cliente</p>
-                    <Input value={nuevoClienteForm.razonSocial} onChange={e => setNuevoClienteForm({...nuevoClienteForm, razonSocial: e.target.value})}
-                      placeholder="Razón social o nombre" className="text-sm h-8" />
-                    <Input value={nuevoClienteForm.rutEmpresa} onChange={e => setNuevoClienteForm({...nuevoClienteForm, rutEmpresa: e.target.value})}
-                      placeholder="RUT (opcional)" className="text-sm h-8" />
-                    <Input value={nuevoClienteForm.email} onChange={e => setNuevoClienteForm({...nuevoClienteForm, email: e.target.value})}
-                      placeholder="Email (opcional)" className="text-sm h-8" type="email" />
-                    <div className="flex gap-2">
-                      <Button size="sm" disabled={creandoCliente || !nuevoClienteForm.razonSocial.trim()} onClick={async () => {
+                  <div className="mt-2 p-3 border border-primary/30 rounded-lg bg-primary/5">
+                    <p className="text-xs font-bold text-muted-foreground mb-2">Nuevo cliente</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select value={nuevoClienteForm.tipoCliente} onChange={e => setNuevoClienteForm({...nuevoClienteForm, tipoCliente: e.target.value, giro: ''})}
+                        className="h-8 rounded-md border border-border bg-background px-3 text-sm text-foreground">
+                        <option value="EMPRESA">Empresa</option>
+                        <option value="PERSONA">Persona natural</option>
+                      </select>
+                      <Input value={nuevoClienteForm.rutEmpresa} onChange={e => setNuevoClienteForm({...nuevoClienteForm, rutEmpresa: e.target.value})}
+                        placeholder="RUT *" className={`text-sm h-8 ${!nuevoClienteForm.rutEmpresa.trim() ? 'border-red-400 focus-visible:ring-red-400' : ''}`} />
+                      <Input value={nuevoClienteForm.razonSocial} onChange={e => setNuevoClienteForm({...nuevoClienteForm, razonSocial: e.target.value})}
+                        placeholder={nuevoClienteForm.tipoCliente === 'PERSONA' ? 'Nombre completo *' : 'Razón social *'}
+                        className={`text-sm h-8 col-span-2 ${!nuevoClienteForm.razonSocial.trim() ? 'border-red-400 focus-visible:ring-red-400' : ''}`} />
+                      {nuevoClienteForm.tipoCliente === 'EMPRESA' && (
+                        <Input value={nuevoClienteForm.giro} onChange={e => setNuevoClienteForm({...nuevoClienteForm, giro: e.target.value})}
+                          placeholder="Giro *"
+                          className={`text-sm h-8 col-span-2 ${!nuevoClienteForm.giro.trim() ? 'border-red-400 focus-visible:ring-red-400' : ''}`} />
+                      )}
+                      <Input value={nuevoClienteForm.direccion} onChange={e => setNuevoClienteForm({...nuevoClienteForm, direccion: e.target.value})}
+                        placeholder="Dirección *"
+                        className={`text-sm h-8 col-span-2 ${!nuevoClienteForm.direccion.trim() ? 'border-red-400 focus-visible:ring-red-400' : ''}`} />
+                      <Input value={nuevoClienteForm.telefono} onChange={e => setNuevoClienteForm({...nuevoClienteForm, telefono: e.target.value})}
+                        placeholder="Teléfono" className="text-sm h-8" />
+                      <Input value={nuevoClienteForm.email} onChange={e => setNuevoClienteForm({...nuevoClienteForm, email: e.target.value})}
+                        placeholder="Email" className="text-sm h-8" type="email" />
+                      <div className="col-span-2 flex gap-2 pt-1">
+                      <Button size="sm" disabled={creandoCliente || !nuevoClienteForm.razonSocial.trim() || !nuevoClienteForm.rutEmpresa.trim() || !nuevoClienteForm.direccion.trim() || (nuevoClienteForm.tipoCliente === 'EMPRESA' && !nuevoClienteForm.giro.trim())} onClick={async () => {
                         setCreandoCliente(true);
                         try {
                           const res = await fetch('/api/clientes', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(nuevoClienteForm) });
@@ -283,7 +304,7 @@ export function VehiculosClient() {
                           setClientes(prev => [...prev, d]);
                           setNuevoData((prev: any) => ({ ...prev, clienteId: d.id }));
                           setShowCrearCliente(false);
-                          setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' });
+                          setNuevoClienteForm({ tipoCliente: 'EMPRESA', razonSocial: '', rutEmpresa: '', giro: '', email: '', telefono: '', direccion: '' });
                           toast.success('Cliente creado');
                         } catch { toast.error('Error'); } finally { setCreandoCliente(false); }
                       }} className="text-xs h-7">
@@ -291,6 +312,7 @@ export function VehiculosClient() {
                         {creandoCliente ? 'Creando...' : 'Crear cliente'}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => setShowCrearCliente(false)} className="text-xs h-7">Cancelar</Button>
+                      </div>
                     </div>
                   </div>
                 )}

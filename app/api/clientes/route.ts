@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     if (!body.razonSocial?.trim()) return NextResponse.json({ error: 'Razón social es requerida' }, { status: 400 });
+    if (!body.rutEmpresa?.trim()) return NextResponse.json({ error: 'RUT es requerido' }, { status: 400 });
     if (!body.direccion?.trim()) return NextResponse.json({ error: 'Dirección es requerida' }, { status: 400 });
     const tipoCliente = body.tipoCliente === 'PERSONA' ? 'PERSONA' : 'EMPRESA';
     if (tipoCliente !== 'PERSONA' && !body.giro?.trim()) return NextResponse.json({ error: 'Giro es requerido' }, { status: 400 });
