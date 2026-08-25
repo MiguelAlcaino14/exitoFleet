@@ -34,6 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data.chasis = vinLimpio;
     }
     if (body?.clienteId !== undefined) data.clienteId = body.clienteId;
+    if (body?.kilometraje !== undefined) data.kilometraje = body.kilometraje !== '' && body.kilometraje != null ? parseInt(body.kilometraje) : null;
 
     const updated = await prisma.vehiculo.update({
       where: { id: params.id },

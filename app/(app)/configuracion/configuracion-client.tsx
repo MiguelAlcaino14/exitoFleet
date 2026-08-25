@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { validarEmail, validarTelefono, validarRut, formatRutInput, formatTelefonoInput } from '@/lib/validaciones';
+import { validarEmail, validarTelefono, validarRut, validarRutConError, formatRutInput, formatTelefonoInput } from '@/lib/validaciones';
 import { Building2, Mail, Plus, Trash2, Star, Loader2, Users, Shield, Eye, EyeOff, Save, UserPlus, ToggleLeft, ToggleRight, Wrench, Pencil, Search, X, Key, ShieldCheck, ShieldOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -109,7 +109,7 @@ export function ConfiguracionClient() {
 
   const crearMecanico = async () => {
     if (!mecNombre.trim()) { setMecError('Nombre requerido'); return; }
-    if (mecRut.trim() && !validarRut(mecRut)) { setMecError('RUT inválido'); return; }
+    if (mecRut.trim()) { const rutErr = validarRutConError(mecRut); if (rutErr) { setMecError(rutErr); return; } }
     if (mecTelefono.trim() && !validarTelefono(mecTelefono)) { setMecError('Teléfono inválido'); return; }
     if (mecEmail.trim() && !validarEmail(mecEmail)) { setMecError('Email inválido'); return; }
     setMecanicoSaving(true); setMecError('');
@@ -174,7 +174,7 @@ export function ConfiguracionClient() {
   };
 
   const guardarEmpresa = async () => {
-    if (empresa.rut?.trim() && !validarRut(empresa.rut)) { toast.error('RUT del taller inválido — formato: 12.345.678-9'); return; }
+    if (empresa.rut?.trim()) { const rutErr = validarRutConError(empresa.rut); if (rutErr) { toast.error(rutErr); return; } }
     if (empresa.telefono?.trim() && !validarTelefono(empresa.telefono)) { toast.error('Teléfono inválido — solo dígitos, 8-15 caracteres'); return; }
     if (empresa.celular?.trim() && !validarTelefono(empresa.celular)) { toast.error('Celular inválido — solo dígitos, 8-15 caracteres'); return; }
     if (empresa.email?.trim() && !validarEmail(empresa.email)) { toast.error('Email de contacto inválido'); return; }
@@ -223,9 +223,7 @@ export function ConfiguracionClient() {
     if (nuevoRol === 'CLIENTE' && !nuevoClienteRut.trim()) {
       toast.error('RUT es requerido para clientes'); return;
     }
-    if (nuevoRol === 'CLIENTE' && !validarRut(nuevoClienteRut)) {
-      toast.error('RUT inválido — formato: 12.345.678-9'); return;
-    }
+    if (nuevoRol === 'CLIENTE') { const rutErr = validarRutConError(nuevoClienteRut); if (rutErr) { toast.error(rutErr); return; } }
     if (nuevoRol === 'CLIENTE' && nuevoClienteTipo === 'EMPRESA' && !nuevoClienteGiro.trim()) {
       toast.error('Giro es requerido para empresas'); return;
     }

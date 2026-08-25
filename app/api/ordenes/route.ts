@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
     const userId = (session.user as any)?.id;
     const scope = await getTallerScope();
     const tid = scope?.tallerId ?? undefined;
+    if (!tid) return NextResponse.json({ error: 'Usuario no tiene taller asignado' }, { status: 403 });
 
     // Si es vehículo nuevo, crear cliente y vehículo
     let vehiculoId = body?.vehiculoId;
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
 
     // M6: usar transacción Serializable para evitar race condition en otNumero
     const orden = await prisma.$transaction(async (tx) => {
-      const last = await tx.ordenTrabajo.findFirst({ orderBy: { otNumero: 'desc' }, select: { otNumero: true } });
+      const last = await tx.ordenTrabajo.findFirst({ where: { tallerId: tid }, orderBy: { otNumero: 'desc' }, select: { otNumero: true } });
       const nextOtNumero = (last?.otNumero ?? 0) + 1;
       return tx.ordenTrabajo.create({
       data: {

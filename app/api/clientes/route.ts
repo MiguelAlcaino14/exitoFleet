@@ -35,8 +35,12 @@ export async function POST(req: NextRequest) {
     const tipoCliente = body.tipoCliente === 'PERSONA' ? 'PERSONA' : 'EMPRESA';
     if (tipoCliente !== 'PERSONA' && !body.giro?.trim()) return NextResponse.json({ error: 'Giro es requerido' }, { status: 400 });
 
+    const ctScope = await getTallerScope();
+    const ctid = ctScope?.tallerId ?? undefined;
+    if (!ctid) return NextResponse.json({ error: 'Usuario no tiene taller asignado' }, { status: 403 });
+
     if (body.rutEmpresa) {
-      const existe = await prisma.cliente.findFirst({ where: { rutEmpresa: body.rutEmpresa.trim() } });
+      const existe = await prisma.cliente.findFirst({ where: { rutEmpresa: body.rutEmpresa.trim(), tallerId: ctid } });
       if (existe) return NextResponse.json({ error: 'Ya existe un cliente con ese RUT' }, { status: 400 });
     }
 
@@ -50,7 +54,7 @@ export async function POST(req: NextRequest) {
         telefono: body.telefono?.trim() || null,
         direccion: body.direccion.trim(),
         tipoCliente,
-        tallerId: (await getTallerScope())?.tallerId ?? undefined,
+        tallerId: ctid,
       },
       include: { vehiculos: true, _count: { select: { vehiculos: true } } },
     });

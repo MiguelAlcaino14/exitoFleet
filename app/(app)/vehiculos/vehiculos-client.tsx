@@ -102,6 +102,7 @@ export function VehiculosClient() {
     const patenteClean = nuevoData.patente.trim().toUpperCase().replace(/[\s-]/g, '');
     if (!PATENTE_RE.test(patenteClean)) { setCrearError('Patente inválida. Formatos válidos: ABC-12 (moto), ABCD-12, AB-1234'); return; }
 
+    if (!nuevoData.vin?.trim()) { setCrearError('VIN / Chasis es requerido'); return; }
     if (!nuevoData.clienteId) { setCrearError('Debe seleccionar un cliente'); return; }
     setCreando(true); setCrearError('');
     try {
@@ -167,6 +168,7 @@ export function VehiculosClient() {
       chasis: v.chasis || '',
       vin: v.vin || '',
       clienteId: v.clienteId || '',
+      kilometraje: v.kilometraje != null ? String(v.kilometraje) : '',
     });
   };
 
@@ -247,7 +249,7 @@ export function VehiculosClient() {
                 <Input value={nuevoData.motor} onChange={(e: any) => setNuevoData({ ...nuevoData, motor: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">VIN / Chasis</label>
+                <label className="text-xs text-muted-foreground mb-1 block">VIN / Chasis *</label>
                 <Input value={nuevoData.vin} onChange={(e: any) => setNuevoData({ ...nuevoData, vin: e.target.value, chasis: e.target.value })} placeholder="17 caracteres" />
               </div>
               <div className="col-span-2">
@@ -502,6 +504,10 @@ export function VehiculosClient() {
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">VIN / Chasis</label>
                 <Input value={editData.vin || editData.chasis} onChange={(e: any) => setEditData({ ...editData, vin: e.target.value, chasis: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Kilometraje</label>
+                <Input type="text" inputMode="numeric" value={editData.kilometraje} onChange={(e: any) => { const v = e.target.value.replace(/\D/g, ''); setEditData({ ...editData, kilometraje: v }); }} placeholder="0" />
               </div>
               <div className="col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">Cliente asignado</label>

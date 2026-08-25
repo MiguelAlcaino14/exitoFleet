@@ -1,10 +1,15 @@
 export function validarRut(rut: string): boolean {
-  if (!rut?.trim()) return false;
+  return !validarRutConError(rut);
+}
+
+export function validarRutConError(rut: string): string | null {
+  if (!rut?.trim()) return 'RUT requerido';
   const clean = rut.replace(/[.\s]/g, '').toUpperCase();
   const match = clean.match(/^(\d+)-([0-9K])$/);
-  if (!match) return false;
+  if (!match) return 'Formato inválido — use 12.345.678-9';
   const body = match[1];
   const dv = match[2];
+  if (body.length < 7 || body.length > 8) return 'RUT inválido — largo incorrecto';
   let sum = 0;
   let mul = 2;
   for (let i = body.length - 1; i >= 0; i--) {
@@ -13,7 +18,8 @@ export function validarRut(rut: string): boolean {
   }
   const expected = 11 - (sum % 11);
   const expectedDv = expected === 11 ? '0' : expected === 10 ? 'K' : String(expected);
-  return dv === expectedDv;
+  if (dv !== expectedDv) return 'Dígito verificador incorrecto';
+  return null;
 }
 
 export function formatRutInput(raw: string): string {

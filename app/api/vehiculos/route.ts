@@ -69,6 +69,10 @@ export async function POST(req: NextRequest) {
     if (!body.patente?.trim()) return NextResponse.json({ error: 'Patente es requerida' }, { status: 400 });
     if (!body.clienteId) return NextResponse.json({ error: 'Debe asignar un cliente' }, { status: 400 });
 
+    const vtScope = await getTallerScope();
+    const vtid = vtScope?.tallerId ?? undefined;
+    if (!vtid) return NextResponse.json({ error: 'Usuario no tiene taller asignado' }, { status: 403 });
+
     const existe = await prisma.vehiculo.findFirst({ where: { patente: body.patente.trim().toUpperCase() } });
     if (existe) return NextResponse.json({ error: 'Ya existe un vehículo con esa patente' }, { status: 400 });
 
@@ -89,7 +93,7 @@ export async function POST(req: NextRequest) {
         chasis: vinLimpio,
         vin: vinLimpio,
         clienteId: body.clienteId,
-        tallerId: (await getTallerScope())?.tallerId ?? undefined,
+        tallerId: vtid,
       },
       include: {
         cliente: { select: { id: true, razonSocial: true } },

@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, ChangeEvent, useEffect, useState, useMemo, useRef } from 'react';
-import { validarRut, validarTelefono, validarEmail, formatRutInput, formatTelefonoInput } from '@/lib/validaciones';
+import { validarRut, validarRutConError, validarTelefono, validarEmail, formatRutInput, formatTelefonoInput } from '@/lib/validaciones';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -144,7 +144,7 @@ export default function AdminClient() {
     if (!form.celular?.trim()) { toast.error('El celular es requerido'); return; }
     if (!form.email?.trim()) { toast.error('El email es requerido'); return; }
     if (!form.division?.trim()) { toast.error('La división es requerida'); return; }
-    if (!validarRut(form.rut)) { toast.error('RUT inválido — formato: 12.345.678-9'); return; }
+    { const rutErr = validarRutConError(form.rut); if (rutErr) { toast.error(rutErr); return; } }
     if (!validarTelefono(form.telefono)) { toast.error('Teléfono inválido — solo dígitos, 8-15 caracteres'); return; }
     if (!validarTelefono(form.celular)) { toast.error('Celular inválido — solo dígitos, 8-15 caracteres'); return; }
     if (!validarEmail(form.email)) { toast.error('Email inválido'); return; }

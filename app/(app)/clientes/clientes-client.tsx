@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { formatRutInput, formatTelefonoInput, validarRut, validarEmail, validarTelefono } from '@/lib/validaciones';
+import { formatRutInput, formatTelefonoInput, validarRut, validarRutConError, validarEmail, validarTelefono } from '@/lib/validaciones';
 import Link from 'next/link';
 import { Users, Building2, Mail, Phone, Truck, Search, ChevronLeft, ChevronRight, Trash2, AlertTriangle, Plus, X, Save, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -64,7 +64,7 @@ export function ClientesClient() {
     const errs: Record<string, string> = {};
     if (!nuevoForm.razonSocial.trim()) errs.razonSocial = tipoCliente === 'empresa' ? 'Razón social requerida' : 'Nombre requerido';
     if (!nuevoForm.rutEmpresa.trim()) errs.rutEmpresa = 'RUT requerido';
-    else if (!validarRut(nuevoForm.rutEmpresa)) errs.rutEmpresa = 'RUT inválido';
+    else { const rutErr = validarRutConError(nuevoForm.rutEmpresa); if (rutErr) errs.rutEmpresa = rutErr; }
     if (!nuevoForm.email.trim()) errs.email = 'Email requerido';
     else if (!validarEmail(nuevoForm.email)) errs.email = 'Email inválido';
     if (!nuevoForm.telefono.trim()) errs.telefono = 'Teléfono requerido';

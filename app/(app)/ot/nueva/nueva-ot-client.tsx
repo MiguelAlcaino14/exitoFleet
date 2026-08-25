@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { validarRut, validarTelefono, validarEmail, formatRutInput, validarPatente, formatPatenteInput } from '@/lib/validaciones';
+import { validarRut, validarRutConError, validarTelefono, validarEmail, formatRutInput, validarPatente, formatPatenteInput } from '@/lib/validaciones';
 import { Search, Truck, User, CheckCircle, Plus, ArrowLeft, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,7 @@ const COMBUSTIBLES = [
 ];
 
 const TIPOS_VEHICULO = [
-  'Camión', 'Tracto Camión', 'Furgón', 'Van', 'Bus', 'Minibus',
-  'Remolque', 'Semirremolque', 'Grúa', 'Maquinaria', 'Motocicleta', 'Otro',
+  'Automovil', 'SUV', 'Camioneta', 'Furgon/Van', 'Camion', 'Bus/Minibus', 'Motocicleta', 'Otro',
 ];
 
 const STEP_LABELS = ['Vehículo y Cliente', 'Datos de Ingreso', 'Checklist'];
@@ -214,9 +213,10 @@ export function NuevaOTClient() {
     if (!nvModelo.trim()) errs.modelo = 'Modelo requerido';
     if (!nvAnio) errs.anio = 'Año requerido';
     if (!nvTipo) errs.tipo = 'Tipo requerido';
-    if (!ncRazonSocial.trim()) errs.razonSocial = 'Razón social requerida';
+    if (!nvVin.trim()) errs.vin = 'VIN / Chasis requerido';
+    if (!ncRazonSocial.trim()) errs.razonSocial = ncTipoCliente === 'EMPRESA' ? 'Razón social requerida' : 'Nombre requerido';
     if (!ncRut.trim()) errs.rut = 'RUT requerido';
-    else if (!validarRut(ncRut)) errs.rut = 'RUT inválido — formato: 12.345.678-9';
+    else { const rutErr = validarRutConError(ncRut); if (rutErr) errs.rut = rutErr; }
     if (ncTipoCliente === 'EMPRESA' && !ncGiro.trim()) errs.giro = 'Giro requerido';
     if (!ncEmail.trim()) errs.email = 'Email requerido';
     else if (!validarEmail(ncEmail)) errs.email = 'Email inválido';
@@ -534,7 +534,7 @@ export function NuevaOTClient() {
                         </div>
                       </div>
                       <div>
-                        <Label>VIN / N° Chasis</Label>
+                        <Label>VIN / N° Chasis *</Label>
                         <Input className={`mt-1 ${errores1.vin ? 'border-red-500' : ''}`} value={nvVin}
                           onChange={(e: any) => { setNvVin(e.target.value); setErrores1(p => ({ ...p, vin: '' })); }}
                           placeholder="Número de chasis o VIN" />

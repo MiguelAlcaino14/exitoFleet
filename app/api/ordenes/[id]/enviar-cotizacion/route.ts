@@ -110,8 +110,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
     if (!ot) return NextResponse.json({ error: 'OT no encontrada' }, { status: 404 });
 
-    const configTaller = await prisma.configuracionTaller.findUnique({ where: { id: 'singleton' } });
-    const empresaNombre = configTaller?.razonSocial || 'D Motor';
+    const configTaller = scope.tallerId
+      ? await prisma.taller.findUnique({ where: { id: scope.tallerId } })
+      : null;
+    const empresaNombre = configTaller?.razonSocial || configTaller?.nombre || 'D Motor';
 
     let cuentaNombre = empresaNombre;
     let cuentaEmail: string | undefined;

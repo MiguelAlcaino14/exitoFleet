@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import { ArrowLeft, Truck, User, Calendar, Gauge, Fuel, FileText, Wrench, Camera, Upload, Loader2, Clock, Send, Printer, Plus, X, MessageSquare, Mail, Check, UserPlus, ClipboardCheck, Save, Trash2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
@@ -61,6 +62,10 @@ function diasDesde(fecha: string | null): number {
 }
 
 export function OTDetalleClient({ otId }: { otId: string }) {
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role ?? '';
+  const puedeLiberar = userRole === 'ADMIN' || userRole === 'JEFE_TALLER' || userRole === 'SUPER_ADMIN';
+
   const [ot, setOt] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('historial');
@@ -623,7 +628,9 @@ export function OTDetalleClient({ otId }: { otId: string }) {
           <select value={ot?.estado ?? ''} onChange={(e) => cambiarEstado(e.target.value)} disabled={saving}
             className="bg-background border border-border rounded-lg px-3 py-2 text-sm font-bold text-foreground">
             {ESTADOS.filter(e =>
-              e.id === ot?.estado || (TRANSICIONES_VALIDAS[ot?.estado ?? ''] ?? []).includes(e.id)
+              puedeLiberar
+                ? true
+                : e.id === ot?.estado || (TRANSICIONES_VALIDAS[ot?.estado ?? ''] ?? []).includes(e.id)
             ).map(e => <option key={e.id} value={e.id}>{e.label}</option>)}
           </select>
           {saving && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
