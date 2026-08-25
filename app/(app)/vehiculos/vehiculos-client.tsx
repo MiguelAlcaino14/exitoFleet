@@ -213,7 +213,7 @@ export function VehiculosClient() {
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><Truck className="w-4 h-4 text-primary" /></div>
                 <h3 className="font-semibold text-foreground text-base">Nuevo Vehículo</h3>
               </div>
-              <button onClick={() => { setShowNuevo(false); setShowCrearCliente(false); setNuevoClienteForm({ razonSocial: '', rutEmpresa: '', email: '', telefono: '' }); }} className="p-1 hover:bg-secondary rounded-lg" disabled={creando}><X className="w-4 h-4" /></button>
+              <button onClick={() => { setShowNuevo(false); setShowCrearCliente(false); setNuevoClienteForm({ tipoCliente: 'EMPRESA', razonSocial: '', rutEmpresa: '', giro: '', email: '', telefono: '', direccion: '' }); }} className="p-1 hover:bg-secondary rounded-lg" disabled={creando}><X className="w-4 h-4" /></button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
