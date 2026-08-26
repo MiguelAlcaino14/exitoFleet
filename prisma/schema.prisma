@@ -169,6 +169,7 @@ model Vehiculo {
   vin             String?
   clienteId       String
   cliente         Cliente   @relation(fields: [clienteId], references: [id])
+  kilometraje     Int?
   tallerId        String?
   taller          Taller?   @relation(fields: [tallerId], references: [id])
   createdAt       DateTime  @default(now())

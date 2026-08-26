@@ -253,6 +253,7 @@ async function main() {
   // OT1 - EN_TRABAJO
   const ot1 = await prisma.ordenTrabajo.create({
     data: {
+      otNumero: 1,
       vehiculoId: v1.id,
       fechaIngreso: hace(8),
       kilometraje: 145230,
@@ -306,6 +307,7 @@ async function main() {
   // OT2 - ESPERANDO_APROBACION (con alerta - lleva 4 días)
   const ot2 = await prisma.ordenTrabajo.create({
     data: {
+      otNumero: 2,
       vehiculoId: v2.id,
       fechaIngreso: hace(6),
       kilometraje: 89500,
@@ -346,6 +348,7 @@ async function main() {
   // OT3 - POR_DIAGNOSTICAR
   const ot3 = await prisma.ordenTrabajo.create({
     data: {
+      otNumero: 3,
       vehiculoId: v3.id,
       fechaIngreso: hace(1),
       kilometraje: 3420,
@@ -380,6 +383,7 @@ async function main() {
   // OT4 - POR_FACTURAR
   const ot4 = await prisma.ordenTrabajo.create({
     data: {
+      otNumero: 4,
       vehiculoId: v4.id,
       fechaIngreso: hace(15),
       kilometraje: 1850,
@@ -417,6 +421,7 @@ async function main() {
   // OT5 - EN_COTIZACION
   const ot5 = await prisma.ordenTrabajo.create({
     data: {
+      otNumero: 5,
       vehiculoId: v5.id,
       fechaIngreso: hace(4),
       kilometraje: 312000,
@@ -437,6 +442,7 @@ async function main() {
   // OT6 - CERRADA (con factura)
   const ot6 = await prisma.ordenTrabajo.create({
     data: {
+      otNumero: 6,
       vehiculoId: v6.id,
       fechaIngreso: hace(30),
       kilometraje: 890,
@@ -477,6 +483,7 @@ async function main() {
   // OT7 - POR_DIAGNOSTICAR (recién ingresada)
   const ot7 = await prisma.ordenTrabajo.create({
     data: {
+      otNumero: 7,
       vehiculoId: v7.id,
       fechaIngreso: new Date(),
       kilometraje: 28750,
