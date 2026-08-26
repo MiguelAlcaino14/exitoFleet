@@ -11,6 +11,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const ot = await prisma.ordenTrabajo.findUnique({
       where: { id: params.id },
       select: {
+        cotizacionExpiresAt: true,
         otNumero: true,
         vehiculo: {
           select: {
@@ -42,6 +43,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     });
 
     if (!ot) return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 });
+
+    if (ot.cotizacionExpiresAt && new Date() > ot.cotizacionExpiresAt) {
+      return NextResponse.json({ error: 'El enlace de esta cotización ha expirado. Contacte al taller para obtener uno nuevo.' }, { status: 410 });
+    }
 
     const totalNeto = ot.itemsValorizacion.reduce((acc, i) => acc + i.precioVenta * i.cantidad, 0);
     const iva = Math.round(totalNeto * 0.19);

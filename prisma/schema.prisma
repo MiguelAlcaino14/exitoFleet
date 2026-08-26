@@ -204,6 +204,7 @@ model OrdenTrabajo {
   fechaInicioTrabajo    DateTime?
   fechaTermino          DateTime?
   fechaFacturacion      DateTime?
+  cotizacionExpiresAt   DateTime?
   observaciones         String?
   mecanicoId            String?
   mecanico              Mecanico?    @relation(fields: [mecanicoId], references: [id])

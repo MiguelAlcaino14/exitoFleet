@@ -56,6 +56,7 @@ function buildEmailHtml(params: {
     </div>
     <div style="background:#f5f5f5;padding:15px 40px;border-radius:0 0 8px 8px;border:1px solid #e5e5e5;border-top:none">
       <p style="color:#999;font-size:11px;margin:0;text-align:center">Este correo fue enviado desde ${empresaNombre}</p>
+      <p style="color:#bbb;font-size:11px;margin:6px 0 0;text-align:center">El enlace de cotización estará disponible por <strong>3 días</strong> desde la fecha de envío.</p>
     </div>
   </div>`;
 }
@@ -128,6 +129,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const iva = Math.round(totalNeto * 0.19);
     const totalConIva = totalNeto + iva;
     const appUrl = process.env.NEXTAUTH_URL || '';
+
+    const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    await prisma.ordenTrabajo.update({
+      where: { id: params.id },
+      data: { cotizacionExpiresAt: expiresAt },
+    });
 
     const htmlBody = buildEmailHtml({
       empresaNombre,
