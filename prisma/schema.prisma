@@ -178,7 +178,7 @@ model Vehiculo {
 
 model OrdenTrabajo {
   id                    String       @id @default(cuid())
-  otNumero              Int          @unique @default(autoincrement())
+  otNumero              Int
   vehiculoId            String
   vehiculo              Vehiculo     @relation(fields: [vehiculoId], references: [id])
   fechaIngreso          DateTime     @default(now())
@@ -213,6 +213,8 @@ model OrdenTrabajo {
   itemsValorizacion     ItemValorizacion[]
   eventosTimeline       EventoTimeline[]
   facturas              Factura[]
+
+  @@unique([otNumero, tallerId])
 }
 
 model ChecklistRecepcion {
