@@ -161,7 +161,7 @@ model Mecanico {
 
 model Vehiculo {
   id              String    @id @default(cuid())
-  patente         String    @unique
+  patente         String
   marca           String?
   modelo          String?
   tipoVehiculo    String?
@@ -177,6 +177,8 @@ model Vehiculo {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   ordenes         OrdenTrabajo[]
+
+  @@unique([patente, tallerId])
 }
 
 model OrdenTrabajo {
@@ -261,7 +263,7 @@ model ItemValorizacion {
 
 model Factura {
   id              String       @id @default(cuid())
-  numero          String       @unique
+  numero          String
   otId            String
   ordenTrabajo    OrdenTrabajo @relation(fields: [otId], references: [id])
   montoNeto       Float        @default(0)
@@ -273,6 +275,8 @@ model Factura {
   taller          Taller?      @relation(fields: [tallerId], references: [id])
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+
+  @@unique([numero, tallerId])
 }
 
 model EventoTimeline {
