@@ -1064,10 +1064,24 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                       </div>
                     )}
                     {fotos.map((foto: any) => (
-                      <div key={foto.id} className="relative aspect-square rounded-lg overflow-hidden border border-border bg-muted">
+                      <div key={foto.id} className="relative aspect-square rounded-lg overflow-hidden border border-border bg-muted group">
                         <Image src={foto.url ?? foto.cloudStoragePath}
                           alt={foto.fileName ?? 'Foto OT'} fill className="object-cover" unoptimized />
                         <Badge className="absolute top-2 left-2 text-[9px]" variant="secondary">{foto.tipoFoto}</Badge>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('¿Eliminar esta foto?')) return;
+                            try {
+                              await fetch(`/api/ordenes/${otId}/fotos/${foto.id}`, { method: 'DELETE' });
+                              fetchFotos();
+                              toast.success('Foto eliminada');
+                            } catch { toast.error('Error al eliminar'); }
+                          }}
+                          className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
+                          title="Eliminar foto"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
                       </div>
                     ))}
                     {fotos.length === 0 && (
