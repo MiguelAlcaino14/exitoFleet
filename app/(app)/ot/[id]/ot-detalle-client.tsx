@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { ArrowLeft, Truck, User, Calendar, Gauge, Fuel, FileText, Wrench, Camera, Upload, Loader2, Clock, Send, Printer, Plus, X, MessageSquare, Mail, Check, UserPlus, ClipboardCheck, Save, Trash2, Pencil } from 'lucide-react';
+import { ArrowLeft, Truck, User, Calendar, Gauge, Fuel, FileText, Wrench, Camera, Upload, Loader2, Clock, Send, Printer, Plus, X, MessageSquare, Mail, Check, UserPlus, ClipboardCheck, Save, Trash2, Pencil, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -105,6 +105,8 @@ export function OTDetalleClient({ otId }: { otId: string }) {
   const [fotos, setFotos] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [deleteFotoId, setDeleteFotoId] = useState<string | null>(null);
+  const [deletingFoto, setDeletingFoto] = useState(false);
 
   // Datos empresa
   const [configTaller, setConfigTaller] = useState<any>(null);
@@ -1069,14 +1071,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                           alt={foto.fileName ?? 'Foto OT'} fill className="object-cover" unoptimized />
                         <Badge className="absolute top-2 left-2 text-[9px]" variant="secondary">{foto.tipoFoto}</Badge>
                         <button
-                          onClick={async () => {
-                            if (!confirm('¿Eliminar esta foto?')) return;
-                            try {
-                              await fetch(`/api/ordenes/${otId}/fotos/${foto.id}`, { method: 'DELETE' });
-                              fetchFotos();
-                              toast.success('Foto eliminada');
-                            } catch { toast.error('Error al eliminar'); }
-                          }}
+                          onClick={() => setDeleteFotoId(foto.id)}
                           className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition hover:bg-red-600"
                           title="Eliminar foto"
                         >
@@ -1369,6 +1364,39 @@ export function OTDetalleClient({ otId }: { otId: string }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal eliminar foto */}
+      {deleteFotoId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!deletingFoto) setDeleteFotoId(null); }}>
+          <div className="bg-card border border-border rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">Eliminar foto</h3>
+                <p className="text-sm text-muted-foreground">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setDeleteFotoId(null)} disabled={deletingFoto}>Cancelar</Button>
+              <Button variant="destructive" size="sm" disabled={deletingFoto} onClick={async () => {
+                setDeletingFoto(true);
+                try {
+                  await fetch(`/api/ordenes/${otId}/fotos/${deleteFotoId}`, { method: 'DELETE' });
+                  setDeleteFotoId(null);
+                  fetchFotos();
+                  toast.success('Foto eliminada');
+                } catch { toast.error('Error al eliminar'); }
+                setDeletingFoto(false);
+              }}>
+                {deletingFoto ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                {deletingFoto ? 'Eliminando...' : 'Eliminar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
