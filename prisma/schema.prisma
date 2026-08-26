@@ -213,8 +213,6 @@ model OrdenTrabajo {
   itemsValorizacion     ItemValorizacion[]
   eventosTimeline       EventoTimeline[]
   facturas              Factura[]
-
-  @@unique([otNumero, tallerId])
 }
 
 model ChecklistRecepcion {
