@@ -24,7 +24,8 @@ export async function generatePresignedUploadUrl(fileName: string, contentType: 
         ? `https://${bucketName}.${region}.digitaloceanspaces.com/${encodedPath}`
         : `https://${bucketName}.s3.${region}.amazonaws.com/${encodedPath}`)
     : undefined;
-  return { uploadUrl, cloud_storage_path, ...(publicUrl ? { publicUrl } : {}) };
+  const headers = isPublic ? { 'x-amz-acl': 'public-read' } : undefined;
+  return { uploadUrl, cloud_storage_path, ...(publicUrl ? { publicUrl } : {}), ...(headers ? { headers } : {}) };
 }
 
 export async function getFileUrl(cloud_storage_path: string, contentType: string, isPublic: boolean) {
