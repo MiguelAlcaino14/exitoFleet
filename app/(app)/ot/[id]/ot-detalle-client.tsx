@@ -130,6 +130,14 @@ export function OTDetalleClient({ otId }: { otId: string }) {
   const [showNuevoContacto, setShowNuevoContacto] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
+  const fetchFotos = useCallback(() => {
+    if (!otId) return;
+    fetch(`/api/ordenes/${otId}/fotos`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setFotos(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, [otId]);
+
   const fetchOT = useCallback(() => {
     if (!otId) return;
     fetch(`/api/ordenes/${otId}`)
@@ -140,11 +148,11 @@ export function OTDetalleClient({ otId }: { otId: string }) {
       .then((d) => {
         setOt(d);
         setDiagnostico(d?.diagnosticoMecanico ?? '');
-        setFotos(d?.fotografias ?? []);
         setLoading(false);
+        fetchFotos();
       })
       .catch(() => setLoading(false));
-  }, [otId]);
+  }, [otId, fetchFotos]);
 
   const fetchTimeline = useCallback(() => {
     fetch(`/api/ordenes/${otId}/timeline`).then(r => r.json()).then(d => setEventos(d ?? []));
@@ -432,7 +440,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_storage_path, contentType: file.type, fileName: file.name, isPublic: true }),
       });
-      await fetchOT();
+      fetchFotos();
       toast.success('Foto subida');
     } catch {
       toast.error('Error al subir foto');
@@ -1057,7 +1065,7 @@ export function OTDetalleClient({ otId }: { otId: string }) {
                     )}
                     {fotos.map((foto: any) => (
                       <div key={foto.id} className="relative aspect-square rounded-lg overflow-hidden border border-border bg-muted">
-                        <Image src={foto.cloudStoragePath?.startsWith('http') ? foto.cloudStoragePath : `/api/files/${encodeURIComponent(foto.cloudStoragePath)}`}
+                        <Image src={foto.url ?? foto.cloudStoragePath}
                           alt={foto.fileName ?? 'Foto OT'} fill className="object-cover" unoptimized />
                         <Badge className="absolute top-2 left-2 text-[9px]" variant="secondary">{foto.tipoFoto}</Badge>
                       </div>
