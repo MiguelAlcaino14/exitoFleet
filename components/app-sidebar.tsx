@@ -12,6 +12,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 interface SidebarProps {
   user: { name?: string | null; email?: string | null; role?: string };
+  logoUrl?: string | null;
+  tallerNombre?: string | null;
 }
 
 const allMenuItems = [
@@ -34,7 +36,7 @@ const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin',
 };
 
-export function AppSidebar({ user }: SidebarProps) {
+export function AppSidebar({ user, logoUrl, tallerNombre }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const role = user?.role ?? 'JEFE_TALLER';
@@ -55,12 +57,20 @@ export function AppSidebar({ user }: SidebarProps) {
         {/* Logo */}
         <div className="px-4 py-5 border-b border-border flex items-center justify-start">
           {!collapsed ? (
-            <>
-              <Image src="/logo.png" alt="D Motor" width={0} height={0} sizes="120px" style={{ width: 'auto', height: 'auto', maxWidth: '120px' }} className="object-contain dark:hidden" priority />
-              <Image src="/logo-dark.png" alt="D Motor" width={0} height={0} sizes="120px" style={{ width: 'auto', height: 'auto', maxWidth: '120px' }} className="object-contain hidden dark:block" priority />
-            </>
+            logoUrl ? (
+              <Image src={logoUrl} alt={tallerNombre ?? 'Logo'} width={0} height={0} sizes="120px" style={{ width: 'auto', height: 'auto', maxWidth: '120px' }} className="object-contain" priority unoptimized />
+            ) : (
+              <>
+                <Image src="/logo.png" alt="D Motor" width={0} height={0} sizes="120px" style={{ width: 'auto', height: 'auto', maxWidth: '120px' }} className="object-contain dark:hidden" priority />
+                <Image src="/logo-dark.png" alt="D Motor" width={0} height={0} sizes="120px" style={{ width: 'auto', height: 'auto', maxWidth: '120px' }} className="object-contain hidden dark:block" priority />
+              </>
+            )
           ) : (
-            <Image src="/favicon.png" alt="D Motor" width={40} height={40} className="object-contain" priority />
+            logoUrl ? (
+              <Image src={logoUrl} alt={tallerNombre ?? 'Logo'} width={40} height={40} className="object-contain rounded" priority unoptimized />
+            ) : (
+              <Image src="/favicon.png" alt="D Motor" width={40} height={40} className="object-contain" priority />
+            )
           )}
         </div>
 

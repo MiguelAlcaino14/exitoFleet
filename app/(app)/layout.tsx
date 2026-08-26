@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { AppSidebar } from '@/components/app-sidebar';
 import { MobileSidebar } from '@/components/mobile-sidebar';
 import { GlobalSearch } from '@/components/global-search';
@@ -17,15 +18,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
   const user = session.user as any;
   const sinTaller = !user?.tallerId && user?.role !== 'SUPER_ADMIN';
+
+  const taller = user?.tallerId
+    ? await prisma.taller.findUnique({ where: { id: user.tallerId }, select: { logoUrl: true, nombre: true } })
+    : null;
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop sidebar */}
       <div data-sidebar className="print:hidden hidden md:flex flex-shrink-0">
-        <AppSidebar user={user} />
+        <AppSidebar user={user} logoUrl={taller?.logoUrl ?? null} tallerNombre={taller?.nombre ?? null} />
       </div>
       {/* Mobile sidebar */}
       <div className="print:hidden md:hidden">
-        <MobileSidebar user={user} />
+        <MobileSidebar user={user} logoUrl={taller?.logoUrl ?? null} tallerNombre={taller?.nombre ?? null} />
       </div>
       <main className="flex-1 overflow-y-auto" data-main-content>
         {sinTaller && (

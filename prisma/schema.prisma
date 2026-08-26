@@ -89,7 +89,7 @@ model User {
 model Cliente {
   id              String    @id @default(cuid())
   tipoCliente     String    @default("EMPRESA")
-  rutEmpresa      String?   @unique
+  rutEmpresa      String?
   razonSocial     String
   giro            String?
   nombreContacto  String?
@@ -105,6 +105,8 @@ model Cliente {
   vehiculos       Vehiculo[]
   contactos       ContactoCliente[]
   eventos         EventoCliente[]
+
+  @@unique([rutEmpresa, tallerId])
 }
 
 model EventoCliente {
