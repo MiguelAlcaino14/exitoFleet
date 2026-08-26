@@ -4,12 +4,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
+  const { allowed } = checkRateLimit(`reset_password:${ip}`, 5);
+  if (!allowed) {
+    return NextResponse.json({ error: 'Demasiados intentos. Espere 15 minutos.' }, { status: 429 });
+  }
+
   try {
     const { token, password } = await req.json();
     if (!token || !password) return NextResponse.json({ error: 'Token y contraseña requeridos' }, { status: 400 });
-    if (password.length < 6) return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 });
+    if (password.length < 8) return NextResponse.json({ error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 });
 
     const secret = process.env.NEXTAUTH_SECRET;
     if (!secret) return NextResponse.json({ error: 'Configuración incompleta' }, { status: 500 });

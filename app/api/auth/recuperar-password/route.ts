@@ -4,8 +4,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
 import jwt from 'jsonwebtoken';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? 'unknown';
+  const { allowed } = checkRateLimit(`recuperar_password:${ip}`, 5);
+  if (!allowed) {
+    return NextResponse.json({ ok: true }); // misma respuesta para no revelar si fue bloqueado
+  }
+
   try {
     const { email } = await req.json();
     if (!email) return NextResponse.json({ error: 'Email requerido' }, { status: 400 });
