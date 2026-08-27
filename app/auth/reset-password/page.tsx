@@ -37,7 +37,7 @@ function ResetForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password) { toast.error('Ingresa la nueva contraseña'); return; }
-    if (password.length < 6) { toast.error('Mínimo 6 caracteres'); return; }
+    if (password.length < 8) { toast.error('Mínimo 8 caracteres'); return; }
     if (password !== confirm) { toast.error('Las contraseñas no coinciden'); return; }
 
     setLoading(true);
@@ -82,7 +82,7 @@ function ResetForm() {
             <Input
               id="password"
               type={showPass ? 'text' : 'password'}
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mínimo 8 caracteres"
               value={password}
               onChange={(e: any) => setPassword(e.target.value)}
               className="pr-10 [&::-ms-reveal]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
